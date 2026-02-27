@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>⚙️ إدارة المنيو - تل السنديان</title>
+    <link rel="icon" href="https://iili.io/qfhk5Pt.png">
+    <link rel="apple-touch-icon" href="https://iili.io/qfhk5Pt.png">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&family=Tajawal:wght@400;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        /* ===== هوية تل السنديان البصرية (مضافة من menu.html) ===== */
+        :root {
+            --forest-green-light: #3f8b3a;
+            --forest-green-bright: #5cb85c;
+            --olive-green-bright: #8bc34a;
+            --sandy-beige: #F5E6D3;
+            --pure-white: #FFFFFF;
+            --off-white: #F8F9FA;
+            --text-dark: #1e3b1a;
+            --shadow-soft: rgba(60, 120, 50, 0.35);
+            --shadow-intense: rgba(45, 90, 39, 0.8);
+            --gradient-forest-luxury: linear-gradient(145deg, #2b5e25, #4e8d42, #7fb073);
+            --gradient-white-luxury: linear-gradient(145deg, #FFFFFF, #F0F2F5, #E5E8EB);
+            --header-overlay: rgba(30, 70, 20, 0.55);
+            --card-radius: 32px;
+            --btn-radius: 60px;
+            --modal-radius: 45px;
+            --transition-smooth: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            --shadow-elevation: 0 25px 45px -10px rgba(30, 70, 10, 0.6), 0 0 0 2px rgba(255, 255, 255, 0.5) inset;
+
+            /* المتغيرات الأصلية للوحة الإدارة (محفوظة) */
+            --forest-green: #2D5A27;
+            --olive-green: #4A7B3D;
+            --clay-brown: #8B5A2B;
+            --cream-white: #FFF9F0;
+            --text-dark: #2C3E2F;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Cairo', sans-serif;
+            background: radial-gradient(circle at 10% 20%, #386f2e, #1f4a18); /* نفس خلفية menu */
+            color: var(--text-dark);
+            direction: rtl;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 10px;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* خلفية الغابة المتحركة (من menu.html) */
+        #animated-forest-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(145deg, #1e4a1a, #3d7534, #68a355);
+            z-index: -2;
+            overflow: hidden;
+            box-shadow: inset 0 0 150px rgba(255, 255, 255, 0.3);
+        }
+
+        /* الأوراق المتساقطة */
+        .falling-leaves {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: -1;
+            overflow: hidden;
+        }
+
+        .leaf {
+            position: absolute;
+            top: -10%;
+            color: rgba(255, 255, 240, 0.9);
+            font-size: 1.8rem;
+            text-shadow: 0 0 15px #ffffff, 0 0 30px #f0fff0;
+            animation: fall linear infinite;
+            user-select: none;
+            opacity: 0.9;
+            filter: drop-shadow(0 10px 8px rgba(0,0,0,0.2));
+        }
+
+        @keyframes fall {
+            0% {
+                transform: translateY(-20vh) rotate(0deg) scale(1);
+                opacity: 0.9;
+            }
+            80% {
+                opacity: 0.7;
+            }
+            100% {
+                transform: translateY(120vh) rotate(360deg) scale(0.8);
+                opacity: 0.2;
+            }
+        }
+
+        /* ===== الشعار الدائري المضيء (محفوظ) ===== */
+        .glowing-logo {
+            border-radius: 50%;
+            border: 5px solid var(--sandy-beige);
+            box-shadow: 0 0 30px var(--forest-green), 0 0 50px rgba(74, 123, 61, 0.8);
+            object-fit: cover;
+            background: var(--cream-white);
+            width: 140px;
+            height: 140px;
+            display: block;
+            margin: 0 auto 20px;
+        }
+
+        .login-screen {
+            background: rgba(255, 249, 240, 0.95);
+            border-radius: 40px;
+            padding: 30px 20px;
+            width: 100%;
+            max-width: 400px;
+            border: 4px solid var(--clay-brown);
+            box-shadow: 0 20px 50px var(--shadow-intense);
+            text-align: center;
+            margin-top: 20px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .input-field {
+            width: 100%;
+            padding: 14px 20px;
+            border: 2px solid var(--sandy-beige);
+            border-radius: 30px;
+            font-family: 'Cairo', sans-serif;
+            font-size: 1em;
+            margin: 10px 0;
+            background: white;
+        }
+        .input-field:focus { outline: none; border-color: var(--forest-green); }
+
+        .login-submit, .sync-btn, .submit-form-btn {
+            background: var(--gradient-forest-luxury);
+            color: white;
+            border: none;
+            padding: 15px 25px;
+            border-radius: 40px;
+            font-weight: 900;
+            font-size: 1.1em;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 10px;
+            border: 2px solid var(--sandy-beige);
+            transition: all 0.3s;
+        }
+        .login-submit:hover, .sync-btn:hover, .submit-form-btn:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+        }
+
+        .app-container {
+            display: none;
+            width: 100%;
+            max-width: 1200px;
+            background: rgba(255, 249, 240, 0.95);
+            border-radius: 30px;
+            border: 4px solid var(--clay-brown);
+            box-shadow: 0 20px 50px var(--shadow-intense);
+            overflow: hidden;
+            flex-direction: column;
+            margin-top: 20px;
+            position: relative;
+            z-index: 1;
+        }
+        .app-container.active { display: flex; }
+
+        .app-header {
+            background: var(--forest-green);
+            color: white;
+            padding: 10px 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 3px solid var(--sandy-beige);
+        }
+        .app-title { 
+            font-size: 1.5em; 
+            font-weight: 900; 
+            display: flex; 
+            align-items: center; 
+            gap: 5px; 
+        }
+        .logout-btn {
+            background: rgba(255,255,255,0.2);
+            border: 2px solid var(--sandy-beige);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 30px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.9em;
+            transition: all 0.3s;
+        }
+        .logout-btn:hover { background: white; color: var(--forest-green); }
+
+        .tabs-container {
+            display: flex;
+            gap: 8px;
+            padding: 15px;
+            background: var(--sandy-beige);
+            border-bottom: 2px solid var(--clay-brown);
+        }
+        .tab-btn {
+            flex: 1;
+            background: var(--cream-white);
+            border: 2px solid var(--forest-green);
+            padding: 12px 5px;
+            border-radius: 40px;
+            font-weight: 700;
+            font-size: 0.95em;
+            color: var(--forest-green);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            transition: all 0.3s;
+        }
+        .tab-btn.active {
+            background: var(--forest-green);
+            color: white;
+            border-color: var(--sandy-beige);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(45,90,39,0.5);
+        }
+
+        .content-area { 
+            padding: 20px; 
+            max-height: 65vh; 
+            overflow-y: auto; 
+        }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        .item-card {
+            background: white;
+            border-radius: 20px;
+            padding: 15px;
+            margin-bottom: 15px;
+            border: 2px solid var(--clay-brown);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+        }
+        .item-info {
+            flex: 1;
+            min-width: 0;
+        }
+        .item-info h3 { 
+            color: var(--forest-green); 
+            margin-bottom: 5px; 
+            font-size: 1.2em;
+            word-break: break-word;
+        }
+        .item-info p {
+            font-size: 0.9em;
+            word-break: break-word;
+        }
+        .item-price { 
+            color: var(--clay-brown); 
+            font-weight: 900; 
+            margin-top: 5px;
+        }
+        .item-actions {
+            display: flex;
+            gap: 8px;
+        }
+        .item-actions button {
+            background: none;
+            border: none;
+            font-size: 1.2em;
+            cursor: pointer;
+            transition: transform 0.2s;
+            padding: 5px;
+        }
+        .item-actions button:hover { transform: scale(1.2); }
+        .edit-btn { color: #007bff; }
+        .delete-btn { color: #dc3545; }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7);
+            backdrop-filter: blur(5px);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            padding: 15px;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal-content {
+            background: var(--cream-white);
+            border-radius: 30px;
+            padding: 20px;
+            width: 100%;
+            max-width: 500px;
+            border: 4px solid var(--clay-brown);
+            box-shadow: 0 20px 50px black;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            border-bottom: 2px solid var(--forest-green);
+            padding-bottom: 8px;
+        }
+        .modal-header h2 {
+            font-size: 1.5em;
+        }
+        .modal-close {
+            font-size: 2em;
+            cursor: pointer;
+            color: var(--clay-brown);
+        }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: 700; color: var(--forest-green); font-size: 0.95em; }
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid var(--sandy-beige);
+            border-radius: 20px;
+            font-family: 'Cairo', sans-serif;
+            font-size: 1em;
+        }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+            outline: none;
+            border-color: var(--forest-green);
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--forest-green);
+            color: white;
+            padding: 12px 25px;
+            border-radius: 40px;
+            z-index: 3000;
+            border: 2px solid var(--sandy-beige);
+            font-weight: bold;
+            font-size: 1em;
+            width: 90%;
+            max-width: 300px;
+            text-align: center;
+        }
+
+        /* تحسينات الجوال */
+        @media (max-width: 600px) {
+            body { padding: 5px; }
+            .glowing-logo {
+                width: 100px;
+                height: 100px;
+            }
+            .login-screen { padding: 20px 15px; }
+            .app-container { margin-top: 15px; }
+            .app-header { padding: 8px 12px; }
+            .app-title { font-size: 1.3em; }
+            .logout-btn { padding: 6px 12px; }
+            .tabs-container { padding: 10px; gap: 5px; flex-wrap: wrap; }
+            .tab-btn { padding: 10px 3px; font-size: 0.85em; flex: 1 1 calc(50% - 5px); }
+            .content-area { padding: 15px; max-height: 60vh; }
+            .item-card { flex-direction: column; align-items: flex-start; }
+            .item-actions { width: 100%; justify-content: flex-end; border-top: 1px dashed var(--sandy-beige); padding-top: 8px; margin-top: 5px; }
+            .item-actions button { font-size: 1.3em; padding: 8px; }
+        }
+        @media (max-width: 400px) {
+            .app-title { font-size: 1.1em; }
+            .tab-btn { font-size: 0.8em; padding: 8px 2px; }
+            .tab-btn i { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <!-- خلفية الغابة والأوراق المتساقطة (مضافة) -->
+    <div id="animated-forest-bg"></div>
+    <div class="falling-leaves" id="fallingLeaves"></div>
+
+    <!-- شاشة الدخول مع اللوجو -->
+    <div class="login-screen" id="loginScreen">
+        <img src="https://iili.io/qfhk5Pt.png" 
+             alt="تل السنديان" 
+             class="glowing-logo" style="margin-bottom: 20px;">
+        <h2 style="color: var(--forest-green); margin-bottom: 15px;">لوحة تحكم تل السنديان</h2>
+        <input type="text" id="username" class="input-field" placeholder="اسم المستخدم" value="Mismar">
+        <input type="password" id="password" class="input-field" placeholder="كلمة المرور" value="Mismar.11">
+        <button class="login-submit" onclick="attemptLogin()">دخول</button>
+        <div id="errorMsg" style="color: red; margin-top: 10px; display: none;">بيانات غير صحيحة</div>
+    </div>
+
+    <!-- بعد تسجيل الدخول: اللوجو في الأعلى ثم المربع -->
+    <div style="display: none; flex-direction: column; align-items: center; width: 100%;" id="postLoginWrapper">
+        <img src="https://iili.io/qfhk5Pt.png" 
+             alt="تل السنديان" 
+             class="glowing-logo">
+        <div class="app-container" id="appContainer">
+            <div class="app-header">
+                <div class="app-title">
+                    إدارة المنيو
+                </div>
+                <button class="logout-btn" onclick="logout()"><i class="fas fa-sign-out-alt"></i> خروج</button>
+            </div>
+
+            <div class="tabs-container">
+                <button class="tab-btn active" onclick="switchTab('categories')"><i class="fas fa-list"></i> الأصناف</button>
+                <button class="tab-btn" onclick="switchTab('products')"><i class="fas fa-utensils"></i> المنتجات</button>
+            </div>
+
+            <div class="content-area">
+                <div class="tab-content active" id="categories"></div>
+                <div class="tab-content" id="products">
+                    <select id="filterCategory" class="input-field" style="margin-bottom: 15px;" onchange="renderProducts()">
+                        <option value="">جميع الأصناف</option>
+                    </select>
+                    <div id="productsList"></div>
+                    <button class="sync-btn" onclick="openProductModal()"><i class="fas fa-plus"></i> إضافة منتج</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">إضافة</h2>
+                <span class="modal-close" onclick="closeModal()">&times;</span>
+            </div>
+            <form id="editForm"></form>
+        </div>
+    </div>
+
+    <script>
+        // دالة إنشاء الأوراق المتساقطة (مضافة)
+        function createLeaves() {
+            const leavesContainer = document.getElementById('fallingLeaves');
+            if (!leavesContainer) return;
+            const leafCount = 30;
+            for (let i = 0; i < leafCount; i++) {
+                const leaf = document.createElement('div');
+                leaf.className = 'leaf';
+                const leafSymbols = ['🌿', '🍂', '🍃'];
+                leaf.textContent = leafSymbols[Math.floor(Math.random() * leafSymbols.length)];
+                const size = Math.random() * 1.5 + 1.2;
+                leaf.style.fontSize = size + 'rem';
+                leaf.style.left = Math.random() * 100 + '%';
+                const duration = Math.random() * 10 + 12;
+                leaf.style.animationDuration = duration + 's';
+                leaf.style.animationDelay = Math.random() * -20 + 's';
+                leaf.style.color = `rgba(255, 255, 255, ${Math.random() * 0.5 + 0.5})`;
+                leavesContainer.appendChild(leaf);
+            }
+        }
+
+        // -------------------- الإعدادات (محفوظة بالكامل) --------------------
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyf1LnxXlGpllpyNeO9Gez1ah-DUSaVfTk3KhPDV8lDtN_Zga1GMZDaM387o0XWhIIW/exec';  // استبدل برابط السيرفر
+
+        const CREDENTIALS = { user: 'Mismar', pass: 'Mismar.11' };
+        let appData = { categories: [], products: [] };
+        let currentTab = 'categories';
+        let editingItem = null;
+
+        // -------------------- تسجيل الدخول --------------------
+        function attemptLogin() {
+            const u = document.getElementById('username').value;
+            const p = document.getElementById('password').value;
+            if (u === CREDENTIALS.user && p === CREDENTIALS.pass) {
+                document.getElementById('loginScreen').style.display = 'none';
+                document.getElementById('postLoginWrapper').style.display = 'flex';
+                document.getElementById('appContainer').classList.add('active');
+                fetchData();
+            } else {
+                document.getElementById('errorMsg').style.display = 'block';
+            }
+        }
+
+        function logout() {
+            document.getElementById('appContainer').classList.remove('active');
+            document.getElementById('postLoginWrapper').style.display = 'none';
+            document.getElementById('loginScreen').style.display = 'block';
+        }
+
+        // -------------------- جلب البيانات --------------------
+        async function fetchData() {
+            try {
+                const res = await fetch(`${SCRIPT_URL}?action=getMenuData`);
+                const data = await res.json();
+                if (data.success) {
+                    appData.categories = data.categories || [];
+                    appData.products = data.products || [];
+                    renderCategories();
+                    renderProducts();
+                }
+            } catch (e) {
+                console.error(e);
+                showToast('فشل الاتصال بالسيرفر');
+            }
+        }
+
+        // -------------------- العرض --------------------
+        function renderCategories() {
+            const container = document.getElementById('categories');
+            const filter = document.getElementById('filterCategory');
+            if (filter) {
+                filter.innerHTML = '<option value="">جميع الأصناف</option>' + 
+                    appData.categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+            }
+
+            container.innerHTML = `
+                <button class="sync-btn" onclick="openCategoryModal()" style="margin-bottom:15px;"><i class="fas fa-plus"></i> إضافة صنف</button>
+                ${appData.categories.map(c => `
+                    <div class="item-card">
+                        <div class="item-info">
+                            <h3>${c.name}</h3>
+                            <p>${c.description || ''}</p>
+                        </div>
+                        <div class="item-actions">
+                            <button class="edit-btn" onclick='editCategory(${JSON.stringify(c)})'><i class="fas fa-pen"></i></button>
+                            <button class="delete-btn" onclick="deleteItem('categories','${c.id}')"><i class="fas fa-trash"></i></button>
+                        </div>
+                    </div>
+                `).join('')}
+            `;
+        }
+
+        function renderProducts() {
+            const filter = document.getElementById('filterCategory').value;
+            let filtered = appData.products;
+            if (filter) filtered = filtered.filter(p => p.categoryId === filter);
+
+            document.getElementById('productsList').innerHTML = filtered.map(p => {
+                const cat = appData.categories.find(c => c.id === p.categoryId);
+                return `
+                    <div class="item-card">
+                        <div class="item-info">
+                            <h3>${p.name} ${p.isNew ? '<span style="color:green;">(جديد)</span>' : ''}</h3>
+                            <p>${cat ? cat.name : 'غير مصنف'} | ${p.description}</p>
+                            <div class="item-price">${p.price} د.أ</div>
+                        </div>
+                        <div class="item-actions">
+                            <button class="edit-btn" onclick='editProduct(${JSON.stringify(p)})'><i class="fas fa-pen"></i></button>
+                            <button class="delete-btn" onclick="deleteItem('products','${p.id}')"><i class="fas fa-trash"></i></button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // -------------------- الإضافة والتعديل --------------------
+        function openCategoryModal(item = { id: '', name: '', description: '', image: '', order: 0 }) {
+            editingItem = item.id ? item : null;
+            document.getElementById('modalTitle').innerText = editingItem ? 'تعديل صنف' : 'إضافة صنف';
+            document.getElementById('editForm').innerHTML = `
+                <div class="form-group"><label>الاسم</label><input type="text" id="cat_name" value="${item.name}"></div>
+                <div class="form-group"><label>الوصف</label><textarea id="cat_desc">${item.description}</textarea></div>
+                <div class="form-group"><label>رابط الصورة</label><input type="text" id="cat_image" value="${item.image}"></div>
+                <div class="form-group"><label>الترتيب</label><input type="number" id="cat_order" value="${item.order}"></div>
+                <button type="button" class="submit-form-btn" onclick="saveCategory()">حفظ</button>
+            `;
+            document.getElementById('modalOverlay').classList.add('active');
+        }
+
+        window.editCategory = (item) => openCategoryModal(item);
+
+        function openProductModal(item = { id: '', categoryId: '', name: '', description: '', price: 0, image: '', isNew: false, order: 0 }) {
+            editingItem = item.id ? item : null;
+            document.getElementById('modalTitle').innerText = editingItem ? 'تعديل منتج' : 'إضافة منتج';
+            let catOptions = appData.categories.map(c => `<option value="${c.id}" ${c.id === item.categoryId ? 'selected' : ''}>${c.name}</option>`).join('');
+            document.getElementById('editForm').innerHTML = `
+                <div class="form-group"><label>الصنف</label><select id="prod_catId">${catOptions}</select></div>
+                <div class="form-group"><label>الاسم</label><input type="text" id="prod_name" value="${item.name}"></div>
+                <div class="form-group"><label>الوصف</label><textarea id="prod_desc">${item.description}</textarea></div>
+                <div class="form-group"><label>السعر</label><input type="number" step="0.1" id="prod_price" value="${item.price}"></div>
+                <div class="form-group"><label>رابط الصورة</label><input type="text" id="prod_image" value="${item.image}"></div>
+                <div class="form-group"><label>جديد</label><select id="prod_isNew"><option value="false" ${!item.isNew ? 'selected' : ''}>لا</option><option value="true" ${item.isNew ? 'selected' : ''}>نعم</option></select></div>
+                <div class="form-group"><label>الترتيب</label><input type="number" id="prod_order" value="${item.order}"></div>
+                <button type="button" class="submit-form-btn" onclick="saveProduct()">حفظ</button>
+            `;
+            document.getElementById('modalOverlay').classList.add('active');
+        }
+
+        window.editProduct = (item) => openProductModal(item);
+
+        function closeModal() {
+            document.getElementById('modalOverlay').classList.remove('active');
+        }
+
+        // -------------------- الحفظ والحذف --------------------
+        function generateId() { return 'id_' + Date.now() + Math.random().toString(36).substr(2,6); }
+
+        async function saveCategory() {
+            const data = {
+                id: editingItem ? editingItem.id : generateId(),
+                name: document.getElementById('cat_name').value,
+                description: document.getElementById('cat_desc').value,
+                image: document.getElementById('cat_image').value,
+                order: parseInt(document.getElementById('cat_order').value) || 0
+            };
+            if (editingItem) {
+                const idx = appData.categories.findIndex(c => c.id === editingItem.id);
+                appData.categories[idx] = data;
+            } else {
+                appData.categories.push(data);
+            }
+            renderCategories();
+            closeModal();
+            await saveToServer('categories');
+        }
+
+        async function saveProduct() {
+            const data = {
+                id: editingItem ? editingItem.id : generateId(),
+                categoryId: document.getElementById('prod_catId').value,
+                name: document.getElementById('prod_name').value,
+                description: document.getElementById('prod_desc').value,
+                price: parseFloat(document.getElementById('prod_price').value),
+                image: document.getElementById('prod_image').value,
+                isNew: document.getElementById('prod_isNew').value === 'true',
+                order: parseInt(document.getElementById('prod_order').value) || 0
+            };
+            if (editingItem) {
+                const idx = appData.products.findIndex(p => p.id === editingItem.id);
+                appData.products[idx] = data;
+            } else {
+                appData.products.push(data);
+            }
+            renderProducts();
+            closeModal();
+            await saveToServer('products');
+        }
+
+        window.deleteItem = async function(type, id) {
+            if (!confirm('تأكيد الحذف؟')) return;
+            appData[type] = appData[type].filter(item => item.id !== id);
+            if (type === 'categories') renderCategories(); else renderProducts();
+            await saveToServer(type);
+        };
+
+        async function saveToServer(type) {
+            try {
+                const formData = new URLSearchParams();
+                formData.append('action', type === 'categories' ? 'saveCategories' : 'saveProducts');
+                formData.append('data', JSON.stringify(appData[type]));
+                await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: formData });
+                showToast('تم الحفظ');
+            } catch (e) {
+                showToast('خطأ في الحفظ');
+            }
+        }
+
+        function switchTab(tab) {
+            currentTab = tab;
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            document.querySelector(`.tab-btn[onclick*="${tab}"]`).classList.add('active');
+            document.getElementById(tab).classList.add('active');
+        }
+
+        function showToast(msg) {
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.innerText = msg;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 2000);
+        }
+
+        // تشغيل الأوراق عند تحميل الصفحة
+        document.addEventListener('DOMContentLoaded', createLeaves);
+    </script>
+</body>
+</html>
