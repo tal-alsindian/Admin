@@ -4,8 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>⚙️ إدارة المنيو - تل السنديان</title>
-    <link rel="icon" href="https://iili.io/qfhk5Pt.png">
-    <link rel="apple-touch-icon" href="https://iili.io/qfhk5Pt.png">
+    <link rel="icon" href="https://archive.org/download/mismar/mismar.png">
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&family=Tajawal:wght@400;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
@@ -398,19 +397,19 @@
 
     <!-- شاشة الدخول مع اللوجو -->
     <div class="login-screen" id="loginScreen">
-        <img src="https://iili.io/qfhk5Pt.png" 
+        <img src="https://archive.org/download/mismar/mismar.png" 
              alt="تل السنديان" 
              class="glowing-logo" style="margin-bottom: 20px;">
         <h2 style="color: var(--forest-green); margin-bottom: 15px;">لوحة تحكم تل السنديان</h2>
-        <input type="text" id="username" class="input-field" placeholder="اسم المستخدم" value="Mismar">
-        <input type="password" id="password" class="input-field" placeholder="كلمة المرور" value="Mismar.11">
+        <input type="text" id="username" class="input-field" placeholder="اسم المستخدم" value="admin">
+        <input type="password" id="password" class="input-field" placeholder="كلمة المرور" value="telalsindian">
         <button class="login-submit" onclick="attemptLogin()">دخول</button>
         <div id="errorMsg" style="color: red; margin-top: 10px; display: none;">بيانات غير صحيحة</div>
     </div>
 
     <!-- بعد تسجيل الدخول: اللوجو في الأعلى ثم المربع -->
     <div style="display: none; flex-direction: column; align-items: center; width: 100%;" id="postLoginWrapper">
-        <img src="https://iili.io/qfhk5Pt.png" 
+        <img src="https://archive.org/download/mismar/mismar.png" 
              alt="تل السنديان" 
              class="glowing-logo">
         <div class="app-container" id="appContainer">
@@ -474,7 +473,7 @@
         // -------------------- الإعدادات (محفوظة بالكامل) --------------------
         const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyf1LnxXlGpllpyNeO9Gez1ah-DUSaVfTk3KhPDV8lDtN_Zga1GMZDaM387o0XWhIIW/exec';  // استبدل برابط السيرفر
 
-        const CREDENTIALS = { user: 'Mismar', pass: 'Mismar.11' };
+        const CREDENTIALS = { user: 'admin', pass: 'telalsindian' };
         let appData = { categories: [], products: [] };
         let currentTab = 'categories';
         let editingItem = null;
