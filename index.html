@@ -289,9 +289,9 @@
     <div class="login-screen" id="loginScreen">
         <img src="https://iili.io/qfhk5Pt.png" alt="تل السنديان" class="glowing-logo">
         <h2 style="color: var(--forest-green); margin-bottom: 15px;">لوحة تحكم تل السنديان</h2>
-        <input type="text" id="username" class="input-field" placeholder="اسم المستخدم" value="Mismar">
-        <input type="password" id="password" class="input-field" placeholder="كلمة المرور" value="Mismar.11">
-        <button class="login-submit" onclick="attemptLogin()">دخول</button>
+        <input type="text" id="username" class="input-field" placeholder="اسم المستخدم" value="">
+        <input type="password" id="password" class="input-field" placeholder="كلمة المرور" value="">
+        <button class="login-submit" onclick="App.attemptLogin()">دخول</button>
         <div id="errorMsg" style="color: red; margin-top: 10px; display: none;">بيانات غير صحيحة</div>
     </div>
 
@@ -302,149 +302,21 @@
             <div class="app-header">
                 <div class="app-title">إدارة المنيو والمبيعات والمخزون</div>
                 <div style="display: flex; gap: 10px;">
-                    <button class="logout-btn" onclick="refreshAllData()" title="تحديث الكل"><i class="fas fa-sync-alt"></i></button>
-                    <button class="logout-btn" onclick="logout()"><i class="fas fa-sign-out-alt"></i> خروج</button>
+                    <button class="logout-btn" onclick="App.refreshAllData()" title="تحديث الكل"><i class="fas fa-sync-alt"></i></button>
+                    <button class="logout-btn" onclick="App.logout()"><i class="fas fa-sign-out-alt"></i> خروج</button>
                 </div>
             </div>
 
             <div class="tabs-container">
-                <button class="tab-btn active" onclick="switchTab('categories')"><i class="fas fa-list"></i> الأصناف</button>
-                <button class="tab-btn" onclick="switchTab('products')"><i class="fas fa-utensils"></i> المنتجات</button>
-                <button class="tab-btn" onclick="switchTab('sales')"><i class="fas fa-chart-line"></i> المبيعات</button>
-                <button class="tab-btn" onclick="switchTab('reports')"><i class="fas fa-file-invoice-dollar"></i> الأرباح والتقارير</button>
-                <button class="tab-btn" onclick="switchTab('inventory')"><i class="fas fa-boxes"></i> المخزون</button>
+                <button class="tab-btn active" onclick="App.switchTab('categories')"><i class="fas fa-list"></i> الأصناف</button>
+                <button class="tab-btn" onclick="App.switchTab('products')"><i class="fas fa-utensils"></i> المنتجات</button>
+                <button class="tab-btn" onclick="App.switchTab('sales')"><i class="fas fa-chart-line"></i> المبيعات</button>
+                <button class="tab-btn" onclick="App.switchTab('reports')"><i class="fas fa-file-invoice-dollar"></i> الأرباح والتقارير</button>
+                <button class="tab-btn" onclick="App.switchTab('inventory')"><i class="fas fa-boxes"></i> المخزون</button>
             </div>
 
-            <div class="content-area">
-                <!-- الأصناف -->
-                <div class="tab-content active" id="categories"></div>
-                
-                <!-- المنتجات -->
-                <div class="tab-content" id="products">
-                    <select id="filterCategory" class="input-field" style="margin-bottom: 15px;" onchange="renderProducts()">
-                        <option value="">جميع الأصناف</option>
-                    </select>
-                    <div id="productsList"></div>
-                    <button class="sync-btn" onclick="openProductModal()"><i class="fas fa-plus"></i> إضافة منتج</button>
-                </div>
-                
-                <!-- المبيعات (تم إعادتها للوضع الأصلي) -->
-                <div class="tab-content" id="sales">
-                    <div class="sales-header">
-                        <div class="sales-filter-row">
-                            <select id="salesStatusFilter" class="filter-select" onchange="filterSales()">
-                                <option value="all">جميع الطلبات</option>
-                                <option value="preparing">قيد التحضير</option>
-                                <option value="completed">مكتملة</option>
-                            </select>
-                            
-                            <div class="date-picker">
-                                <label>من:</label>
-                                <input type="date" id="salesDateFrom" class="date-input">
-                                <label>إلى:</label>
-                                <input type="date" id="salesDateTo" class="date-input">
-                            </div>
-
-                            <div class="date-preset-buttons">
-                                <button class="date-preset-btn" onclick="setSalesDatePreset('today')">اليوم</button>
-                                <button class="date-preset-btn" onclick="setSalesDatePreset('yesterday')">أمس</button>
-                                <button class="date-preset-btn" onclick="setSalesDatePreset('week')">هذا الأسبوع</button>
-                                <button class="date-preset-btn" onclick="setSalesDatePreset('month')">هذا الشهر</button>
-                                <button class="date-preset-btn" onclick="setSalesDatePreset('all')">الكل</button>
-                            </div>
-
-                            <button class="apply-filter-btn" onclick="applySalesDateFilter()"><i class="fas fa-filter"></i> تطبيق</button>
-                            <button class="refresh-sales-btn" onclick="refreshSales()" title="تحديث من الكاش"><i class="fas fa-sync-alt"></i></button>
-                            <button class="refresh-sales-btn" onclick="syncOrdersFromServer()" title="مزامنة من السيرفر"><i class="fas fa-cloud-download-alt"></i> مزامنة</button>
-                        </div>
-                    </div>
-                    <div id="salesList" class="orders-grid"></div>
-                </div>
-                
-                <!-- جرد المبيعات والأرباح -->
-                <div class="tab-content" id="reports">
-                    <div class="reports-header">
-                        <div class="date-range-picker">
-                            <div><label>من:</label> <input type="date" id="startDate" class="date-input"></div>
-                            <div><label>إلى:</label> <input type="date" id="endDate" class="date-input"></div>
-                            <button class="refresh-sales-btn" onclick="applyDateRange()"><i class="fas fa-filter"></i> تطبيق</button>
-                        </div>
-                        <div class="preset-buttons">
-                            <button class="preset-btn active" onclick="setDatePreset('today', event)">اليوم</button>
-                            <button class="preset-btn" onclick="setDatePreset('yesterday', event)">أمس</button>
-                            <button class="preset-btn" onclick="setDatePreset('week', event)">هذا الأسبوع</button>
-                            <button class="preset-btn" onclick="setDatePreset('month', event)">هذا الشهر</button>
-                            <button class="preset-btn" onclick="setDatePreset('year', event)">هذه السنة</button>
-                            <button class="preset-btn" onclick="setDatePreset('all', event)">الكل</button>
-                        </div>
-                    </div>
-
-                    <div class="stats-cards">
-                        <div class="stat-card">
-                            <div class="stat-icon"><i class="fas fa-coins"></i></div>
-                            <div class="stat-label">إجمالي المبيعات</div>
-                            <div class="stat-value" id="totalSales">0 د.أ</div>
-                        </div>
-                        <div class="stat-card profit-card">
-                            <div class="stat-icon"><i class="fas fa-sack-dollar"></i></div>
-                            <div class="stat-label">صافي الربح الكلي</div>
-                            <div class="stat-value" id="totalProfit">0 د.أ</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-icon"><i class="fas fa-receipt"></i></div>
-                            <div class="stat-label">عدد الطلبات</div>
-                            <div class="stat-value" id="totalOrders">0</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-icon"><i class="fas fa-chart-pie"></i></div>
-                            <div class="stat-label">متوسط نسبة الربح</div>
-                            <div class="stat-value" id="avgMargin">0%</div>
-                        </div>
-                    </div>
-
-                    <div class="chart-container"><canvas id="salesChart"></canvas></div>
-
-                    <div class="top-products-table">
-                        <h3><i class="fas fa-crown" style="color: var(--clay-brown);"></i> تحليل الأرباح للمنتجات</h3>
-                        <div class="table-responsive">
-                            <table id="topProductsTable">
-                                <thead>
-                                    <tr>
-                                        <th>المنتج</th>
-                                        <th>الكمية</th>
-                                        <th>الإيراد</th>
-                                        <th>التكلفة</th>
-                                        <th>صافي الربح</th>
-                                        <th>هامش الربح</th>
-                                    </tr>
-                                </thead>
-                                <tbody></tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- المخزون -->
-                <div class="tab-content" id="inventory">
-                    <div class="inventory-header">
-                        <h2 style="color: var(--forest-green);"><i class="fas fa-boxes"></i> إدارة المخزون</h2>
-                        <div class="inventory-actions">
-                            <button class="action-btn small" onclick="openInventoryCountModal()"><i class="fas fa-pen"></i> تسوية المخزون</button>
-                            <button class="action-btn small" onclick="resetOpeningStock()"><i class="fas fa-undo-alt"></i> إعادة تعيين الافتتاحي</button>
-                            <button class="action-btn small" onclick="resetFullInventory()"><i class="fas fa-broom"></i> تصفير المخزون</button>
-                            <button class="action-btn small" onclick="exportInventory()"><i class="fas fa-download"></i> تصدير</button>
-                            <button class="action-btn small" onclick="importInventory()"><i class="fas fa-upload"></i> استيراد</button>
-                        </div>
-                    </div>
-                    <div class="inventory-table-container">
-                        <table class="inventory-table">
-                            <thead>
-                                <tr><th>المنتج</th><th>المباع اليوم</th><th>إجمالي المباع</th><th>المخزون النظري</th><th>المخزون الفعلي</th><th>الفرق</th><th>آخر جرد</th></tr>
-                            </thead>
-                            <tbody id="inventoryTableBody"></tbody>
-                        </table>
-                    </div>
-                </div>
+            <div class="content-area" id="contentArea">
+                <!-- يتم تعبئة المحتوى عبر JavaScript -->
             </div>
         </div>
     </div>
@@ -452,7 +324,7 @@
     <!-- مودال تسوية المخزون -->
     <div class="modal-overlay" id="inventoryModal">
         <div class="modal-content">
-            <div class="modal-header"><h2>تسوية المخزون</h2><span class="modal-close" onclick="closeInventoryModal()">&times;</span></div>
+            <div class="modal-header"><h2>تسوية المخزون</h2><span class="modal-close" onclick="App.UI.closeInventoryModal()">&times;</span></div>
             <div id="inventoryForm">
                 <p>أدخل الكميات الفعلية للمنتجات</p>
                 <div style="max-height: 300px; overflow-y: auto; margin: 15px 0;">
@@ -461,7 +333,7 @@
                         <tbody id="inventoryCountTable"></tbody>
                     </table>
                 </div>
-                <button class="submit-form-btn" onclick="submitInventoryCount()">حفظ التسوية</button>
+                <button class="submit-form-btn" onclick="App.Inventory.submitCount()">حفظ التسوية</button>
             </div>
         </div>
     </div>
@@ -469,419 +341,1000 @@
     <!-- مودال عام -->
     <div class="modal-overlay" id="modalOverlay">
         <div class="modal-content">
-            <div class="modal-header"><h2 id="modalTitle">إضافة</h2><span class="modal-close" onclick="closeModal()">&times;</span></div>
+            <div class="modal-header"><h2 id="modalTitle">إضافة</h2><span class="modal-close" onclick="App.UI.closeModal()">&times;</span></div>
             <form id="editForm"></form>
         </div>
     </div>
 
     <script>
-        function createLeaves() {
-            const leavesContainer = document.getElementById('fallingLeaves');
-            if (!leavesContainer) return;
-            for (let i = 0; i < 30; i++) {
-                const leaf = document.createElement('div');
-                leaf.className = 'leaf';
-                leaf.textContent = ['🌿','🍂','🍃'][Math.floor(Math.random() * 3)];
-                leaf.style.left = Math.random() * 100 + '%';
-                leaf.style.animationDuration = (Math.random() * 10 + 12) + 's';
-                leaf.style.animationDelay = Math.random() * -20 + 's';
-                leavesContainer.appendChild(leaf);
-            }
-        }
+        // ============================================================
+        // النظام المتكامل لإدارة تل السنديان - نسخة محسنة بشكل جذري
+        // مع CSS الأصلي
+        // ============================================================
 
-        // -------------------- الإعدادات والمتغيرات العامة --------------------
-        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzTCkWGX2AqZVL70j38XbfphD_4-jHZx71ro-N77b39vBY7u5pftZ0hXtbVRZ0kDNAr/exec';
-        const KITCHEN_API_URL = 'https://script.google.com/macros/s/AKfycbzU7pp0Ul8KNDT4iEd7kGFxNrXYzX4B4zfdYANjE59ABvMq1vIKlmEM4gAOipY47Zeoiw/exec';
+        (function() {
+            // ---------- البيئة والإعدادات ----------
+            const CONFIG = {
+                SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbzTCkWGX2AqZVL70j38XbfphD_4-jHZx71ro-N77b39vBY7u5pftZ0hXtbVRZ0kDNAr/exec',
+                KITCHEN_API_URL: 'https://script.google.com/macros/s/AKfycbzU7pp0Ul8KNDT4iEd7kGFxNrXYzX4B4zfdYANjE59ABvMq1vIKlmEM4gAOipY47Zeoiw/exec',
+                CREDENTIALS: { user: 'Mismar', pass: 'Mismar.11' },
+                STORAGE_KEYS: {
+                    INVENTORY: 'tel_alsindian_inventory',
+                    ORDERS_CACHE: 'tel_alsindian_orders_cache',
+                    ORDERS_TIMESTAMP: 'tel_alsindian_orders_timestamp',
+                    MENU_CACHE: 'tel_alsindian_menu_cache'
+                },
+                MAX_RETRIES: 3,
+                RETRY_DELAY: 1000,
+                REQUEST_TIMEOUT: 10000
+            };
 
-        const CREDENTIALS = { user: 'Mismar', pass: 'Mismar.11' };
-        let appData = { categories: [], products: [] };
-        let currentTab = 'categories';
-        let editingItem = null;
+            // ---------- حالة التطبيق العامة ----------
+            const AppState = {
+                user: null,
+                isAuthenticated: false,
+                categories: [],
+                products: [],
+                allOrders: [],
+                inventoryData: [],
+                currentTab: 'categories',
+                salesChart: null,
+                isLoading: false,
+                pendingRequests: 0,
+                offlineQueue: []  // للأعمال التي فشلت بسبب الاتصال
+            };
 
-        let allOrders = [];
-        let inventoryData = [];
-        let currentSalesFilter = 'all';
-        let salesDateFrom = null;
-        let salesDateTo = null;
-        let salesChart = null;
-        let currentDatePreset = 'today';
+            // ---------- دوال مساعدة عامة ----------
+            const Utils = {
+                generateId: () => 'id_' + Date.now() + Math.random().toString(36).substr(2, 6),
 
-        // مفاتيح التخزين المحلي (تمت إزالة PRODUCT_COSTS)
-        const STORAGE_KEYS = {
-            INVENTORY: 'tel_alsindian_inventory',
-            ORDERS_CACHE: 'tel_alsindian_orders_cache',
-            ORDERS_TIMESTAMP: 'tel_alsindian_orders_timestamp'
-        };
+                showToast: (msg, isError = false, duration = 3000) => {
+                    const toast = document.createElement('div');
+                    toast.className = 'toast';
+                    toast.style.backgroundColor = isError ? '#c0392b' : 'var(--forest-green)';
+                    toast.innerText = msg;
+                    document.body.appendChild(toast);
+                    setTimeout(() => toast.remove(), duration);
+                },
 
-        // -------------------- دوال المخزون --------------------
-        function loadInventoryFromStorage() {
-            const stored = localStorage.getItem(STORAGE_KEYS.INVENTORY);
-            if (stored) {
-                try { inventoryData = JSON.parse(stored); } catch (e) { inventoryData = []; }
-            } else {
-                inventoryData = appData.products.map(p => ({ productId: p.id, openingStock: 0, actualStock: 0, lastCountDate: null }));
-                saveInventoryToStorage();
-            }
-        }
-        function saveInventoryToStorage() { localStorage.setItem(STORAGE_KEYS.INVENTORY, JSON.stringify(inventoryData)); }
+                showLoading: (show) => {
+                    AppState.isLoading = show;
+                    // يمكن إضافة مؤشر تحميل عام
+                },
 
-        function calculateSalesStats() {
-            const completedOrders = allOrders.filter(o => o.status === 'completed');
-            const totalSoldMap = new Map();
-            const todaySoldMap = new Map();
-            const todayStart = new Date(); todayStart.setHours(0,0,0,0);
-            completedOrders.forEach(order => {
-                (order.items || []).forEach(item => {
-                    let productId = item.productId;
-                    if (!productId) { const product = appData.products.find(p => p.name === item.name); if (product) productId = product.id; }
-                    if (productId) {
-                        const qty = Number(item.quantity) || 0;
-                        totalSoldMap.set(productId, (totalSoldMap.get(productId) || 0) + qty);
-                        const orderDate = new Date(order.timestamp);
-                        if (orderDate >= todayStart) { todaySoldMap.set(productId, (todaySoldMap.get(productId) || 0) + qty); }
+                formatDate: (date) => {
+                    const d = new Date(date);
+                    return d.toLocaleDateString('ar-EG') + ' ' + d.toLocaleTimeString('ar-EG');
+                },
+
+                safeJSONParse: (str, fallback = null) => {
+                    try { return JSON.parse(str); } catch { return fallback; }
+                },
+
+                // طلب HTTP مع إعادة محاولة ومهلة
+                async fetchWithRetry(url, options = {}, retries = CONFIG.MAX_RETRIES) {
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), CONFIG.REQUEST_TIMEOUT);
+                    try {
+                        AppState.pendingRequests++;
+                        const response = await fetch(url, { ...options, signal: controller.signal });
+                        clearTimeout(timeoutId);
+                        if (!response.ok) throw new Error(`HTTP error ${response.status}`);
+                        return await response.json();
+                    } catch (error) {
+                        if (retries > 0) {
+                            await new Promise(res => setTimeout(res, CONFIG.RETRY_DELAY));
+                            return this.fetchWithRetry(url, options, retries - 1);
+                        }
+                        throw error;
+                    } finally {
+                        AppState.pendingRequests--;
                     }
-                });
-            });
-            return { totalSoldMap, todaySoldMap };
-        }
+                },
 
-        function renderInventory() {
-            const tbody = document.getElementById('inventoryTableBody');
-            if (!tbody) return;
-            if (!appData.products.length) { tbody.innerHTML = '<tr><td colspan="7" class="empty-state">لا توجد منتجات</td></tr>'; return; }
-            const { totalSoldMap, todaySoldMap } = calculateSalesStats();
-            tbody.innerHTML = appData.products.map(product => {
-                const inventory = inventoryData.find(i => i.productId === product.id) || { openingStock: 0, actualStock: 0, lastCountDate: null };
-                const totalSold = totalSoldMap.get(product.id) || 0;
-                const todaySold = todaySoldMap.get(product.id) || 0;
-                const theoreticalStock = (inventory.openingStock || 0) - totalSold;
-                const actualStock = inventory.actualStock || 0;
-                const diff = theoreticalStock - actualStock;
-                const diffClass = diff > 0 ? 'diff-positive' : (diff < 0 ? 'diff-negative' : '');
-                const lastCount = inventory.lastCountDate ? new Date(inventory.lastCountDate).toLocaleDateString('ar-EG') : 'لم يسجل';
-                return `<tr><td>${product.name}</td><td>${todaySold}</td><td>${totalSold}</td><td>${theoreticalStock}</td><td>${actualStock}</td><td class="${diffClass}">${diff > 0 ? '+' : ''}${diff}</td><td>${lastCount}</td></tr>`;
-            }).join('');
-        }
+                // حفظ البيانات في التخزين المحلي مع تشفير بسيط (base64)
+                setSecureItem: (key, value) => {
+                    try {
+                        const encoded = btoa(JSON.stringify(value));
+                        localStorage.setItem(key, encoded);
+                    } catch (e) {
+                        console.error('فشل في حفظ البيانات:', e);
+                    }
+                },
 
-        function openInventoryCountModal() {
-            const tbody = document.getElementById('inventoryCountTable');
-            if (!tbody) return;
-            tbody.innerHTML = appData.products.map(product => {
-                const inventory = inventoryData.find(i => i.productId === product.id) || { actualStock: 0 };
-                return `<tr><td>${product.name}</td><td><input type="number" min="0" step="1" value="${inventory.actualStock}" class="qty-input" id="count-${product.id}"></td></tr>`;
-            }).join('');
-            document.getElementById('inventoryModal').classList.add('active');
-        }
-        function closeInventoryModal() { document.getElementById('inventoryModal').classList.remove('active'); }
+                getSecureItem: (key) => {
+                    try {
+                        const item = localStorage.getItem(key);
+                        if (!item) return null;
+                        return JSON.parse(atob(item));
+                    } catch {
+                        return null;
+                    }
+                },
 
-        function submitInventoryCount() {
-            const inputs = document.querySelectorAll('#inventoryCountTable input');
-            inputs.forEach(input => {
-                const productId = input.id.replace('count-', '');
-                const qty = parseInt(input.value) || 0;
-                let inventory = inventoryData.find(i => i.productId === productId);
-                if (!inventory) { inventory = { productId, openingStock: 0, actualStock: qty, lastCountDate: new Date().toISOString() }; inventoryData.push(inventory); }
-                else { inventory.actualStock = qty; inventory.lastCountDate = new Date().toISOString(); }
-            });
-            saveInventoryToStorage(); renderInventory(); closeInventoryModal(); showToast('تم تحديث المخزون الفعلي');
-        }
+                // إضافة عملية إلى قائمة الانتظار عند عدم الاتصال
+                addToQueue: (action, data) => {
+                    AppState.offlineQueue.push({ action, data, timestamp: Date.now() });
+                    Utils.showToast('تم حفظ العملية محلياً وستنفذ عند استعادة الاتصال');
+                },
 
-        function resetOpeningStock() {
-            if (!confirm('سيتم إعادة تعيين المخزون الافتتاحي لجميع المنتجات إلى الصفر. هل أنت متأكد؟')) return;
-            inventoryData.forEach(i => i.openingStock = 0); saveInventoryToStorage(); renderInventory(); showToast('تم إعادة تعيين المخزون الافتتاحي');
-        }
-
-        function resetFullInventory() {
-            if (!confirm('سيتم تصفير جميع أرقام المخزون والمبيعات بشكل دائم. هل أنت متأكد؟')) return;
-            allOrders = allOrders.filter(o => o.status !== 'completed');
-            inventoryData.forEach(i => { i.openingStock = 0; i.actualStock = 0; i.lastCountDate = new Date().toISOString(); });
-            saveInventoryToStorage();
-            localStorage.setItem(STORAGE_KEYS.ORDERS_CACHE, JSON.stringify(allOrders));
-            localStorage.setItem(STORAGE_KEYS.ORDERS_TIMESTAMP, new Date().toISOString());
-            renderInventory(); filterSales(); showToast('تم تصفير المخزون والمبيعات بشكل دائم');
-        }
-
-        function exportInventory() {
-            const dataStr = JSON.stringify(inventoryData, null, 2);
-            const blob = new Blob([dataStr], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a'); a.href = url; a.download = `inventory_${new Date().toISOString().split('T')[0]}.json`; a.click(); URL.revokeObjectURL(url);
-        }
-
-        function importInventory() {
-            const input = document.createElement('input'); input.type = 'file'; input.accept = '.json';
-            input.onchange = e => {
-                const file = e.target.files[0]; const reader = new FileReader();
-                reader.onload = event => {
-                    try { const data = JSON.parse(event.target.result); if (Array.isArray(data)) { inventoryData = data; saveInventoryToStorage(); renderInventory(); showToast('تم استيراد المخزون بنجاح'); } else { showToast('ملف غير صالح'); } } catch (ex) { showToast('خطأ في قراءة الملف'); }
-                }; reader.readAsText(file);
-            }; input.click();
-        }
-
-        // -------------------- دوال الطلبات --------------------
-        async function loadOrders(forceRefresh = false) {
-            if (!forceRefresh) {
-                const cached = localStorage.getItem(STORAGE_KEYS.ORDERS_CACHE);
-                if (cached) { try { allOrders = JSON.parse(cached); afterOrdersLoaded(); return; } catch (e) { console.warn('فشل تحميل الكاش، سيتم التحميل من السيرفر'); } }
-            }
-            try {
-                const url = `${KITCHEN_API_URL}?action=getOrders&status=all&_=${Date.now()}`;
-                const controller = new AbortController(); const timeoutId = setTimeout(() => controller.abort(), 5000);
-                const response = await fetch(url, { method: 'GET', mode: 'cors', headers: { 'Accept': 'application/json' }, signal: controller.signal });
-                clearTimeout(timeoutId);
-                const data = await response.json();
-                if (data.success && data.orders) {
-                    allOrders = data.orders.map(order => {
-                        const items = Array.isArray(order.items) ? order.items.map(item => {
-                            const quantity = Number(item.quantity) || 1; const price = Number(item.price) || 0; const name = item.name || 'منتج';
-                            const product = appData.products.find(p => p.name === name);
-                            return { productId: product ? product.id : null, name: name, quantity: quantity, price: price };
-                        }) : [];
-                        let total = Number(order.total) || 0;
-                        if (total === 0 && items.length > 0) total = items.reduce((sum, it) => sum + (it.price * it.quantity), 0);
-                        return { orderId: order.orderId || order.id || 'غير معروف', timestamp: order.timestamp || order.date || order.time || new Date().toISOString(), tableNumber: order.tableNumber || order.table || '?', notes: order.notes || '', total: total, items: items, status: order.status || 'preparing' };
-                    });
-                    localStorage.setItem(STORAGE_KEYS.ORDERS_CACHE, JSON.stringify(allOrders));
-                    localStorage.setItem(STORAGE_KEYS.ORDERS_TIMESTAMP, new Date().toISOString());
-                } else { generateMockOrders(); }
-            } catch (error) { console.error('خطأ في تحميل الطلبات:', error); showToast('تعذر الاتصال بسيرفر المطبخ، استخدام البيانات المحفوظة'); const cached = localStorage.getItem(STORAGE_KEYS.ORDERS_CACHE); if (cached) { allOrders = JSON.parse(cached); } else { generateMockOrders(); } }
-            afterOrdersLoaded();
-        }
-
-        function afterOrdersLoaded() { filterSales(); if (currentTab === 'reports') applyDatePreset(currentDatePreset); if (currentTab === 'inventory') renderInventory(); }
-        function generateMockOrders() {
-            const mockOrders = []; const today = new Date();
-            const burger = appData.products.find(p => p.name.includes('برجر')) || { id: 'mock1', name: 'برجر لحم', price: 8.50 };
-            const fries = appData.products.find(p => p.name.includes('بطاطا')) || { id: 'mock2', name: 'بطاطا مقلية', price: 3.50 };
-            const cola = appData.products.find(p => p.name.includes('كوكا')) || { id: 'mock3', name: 'كوكاكولا', price: 2.50 };
-            mockOrders.push({ orderId: 'TEST-001', timestamp: today.toISOString(), tableNumber: '5', notes: 'بدون بصل', total: 25.50, items: [{ productId: burger.id, name: burger.name, quantity: 2, price: burger.price }, { productId: fries.id, name: fries.name, quantity: 1, price: fries.price }, { productId: cola.id, name: cola.name, quantity: 2, price: cola.price }], status: 'completed' });
-            allOrders = mockOrders;
-        }
-        function syncOrdersFromServer() { if (confirm('سيتم جلب آخر الطلبات من السيرفر وفقدان أي تعديلات محلية. هل تريد المتابعة؟')) { loadOrders(true); showToast('جاري المزامنة من السيرفر...'); } }
-        function refreshSales() { loadOrders(false); showToast('جاري تحديث المبيعات...'); }
-
-        // -------------------- فلاتر المبيعات --------------------
-        function initSalesDates() {
-            const today = new Date(); const sevenDaysAgo = new Date(today); sevenDaysAgo.setDate(today.getDate() - 7);
-            document.getElementById('salesDateFrom').value = sevenDaysAgo.toISOString().split('T')[0];
-            document.getElementById('salesDateTo').value = today.toISOString().split('T')[0];
-            salesDateFrom = sevenDaysAgo; salesDateTo = today;
-        }
-        function applySalesDateFilter() {
-            const fromStr = document.getElementById('salesDateFrom').value; const toStr = document.getElementById('salesDateTo').value;
-            if (fromStr) { salesDateFrom = new Date(fromStr); salesDateFrom.setHours(0,0,0,0); } else { salesDateFrom = null; }
-            if (toStr) { salesDateTo = new Date(toStr); salesDateTo.setHours(23,59,59,999); } else { salesDateTo = null; }
-            filterSales();
-        }
-        function setSalesDatePreset(preset) {
-            const today = new Date(); let from, to;
-            switch(preset) {
-                case 'today': from = new Date(today.setHours(0,0,0,0)); to = new Date(today.setHours(23,59,59,999)); break;
-                case 'yesterday': const y = new Date(today); y.setDate(y.getDate()-1); from = new Date(y.setHours(0,0,0,0)); to = new Date(y.setHours(23,59,59,999)); break;
-                case 'week': const fd = new Date(today.setDate(today.getDate()-today.getDay()+(today.getDay()===0?-6:1))); from = new Date(fd.setHours(0,0,0,0)); to = new Date(new Date().setHours(23,59,59,999)); break;
-                case 'month': from = new Date(today.getFullYear(), today.getMonth(), 1, 0,0,0); to = new Date(today.getFullYear(), today.getMonth()+1, 0, 23,59,59); break;
-                case 'all': default: from=null; to=null; break;
-            }
-            if (from) { document.getElementById('salesDateFrom').value = from.toISOString().split('T')[0]; document.getElementById('salesDateTo').value = to.toISOString().split('T')[0]; salesDateFrom=from; salesDateTo=to; }
-            else { document.getElementById('salesDateFrom').value=''; document.getElementById('salesDateTo').value=''; salesDateFrom=null; salesDateTo=null; }
-            filterSales();
-        }
-        function filterSales() {
-            const statusFilter = document.getElementById('salesStatusFilter').value; currentSalesFilter = statusFilter;
-            let filtered = allOrders;
-            if (statusFilter !== 'all') filtered = filtered.filter(o => o.status === statusFilter);
-            if (salesDateFrom) filtered = filtered.filter(o => new Date(o.timestamp) >= salesDateFrom);
-            if (salesDateTo) filtered = filtered.filter(o => new Date(o.timestamp) <= salesDateTo);
-            filtered.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-            renderSales(filtered);
-        }
-        function renderSales(orders) {
-            const container = document.getElementById('salesList'); if (!container) return;
-            if (orders.length === 0) { container.innerHTML = `<div class="empty-state"><i class="fas fa-receipt"></i><h3>لا توجد طلبات</h3><p>لا توجد طلبات تطابق الفلاتر المحددة</p></div>`; return; }
-            container.innerHTML = orders.map(order => {
-                const items = order.items || [];
-                const timeStr = order.timestamp ? new Date(order.timestamp).toLocaleString('ar-EG') : '-';
-                const total = order.total.toFixed(2);
-                return `<div class="order-card"><div class="order-header"><span class="order-id">${order.orderId}</span><span class="order-time">${timeStr}</span></div><div class="order-body"><div class="order-table"><i class="fas fa-chair"></i> طاولة رقم: ${order.tableNumber}</div><div class="order-items-list">${items.map(item => `<div class="order-item-row"><span class="order-item-name">${item.name}</span><span class="order-item-qty">x${item.quantity || 1} (${((item.price||0)*(item.quantity||1)).toFixed(2)} د.أ)</span></div>`).join('')}</div><div class="order-total">الإجمالي: ${total} د.أ</div><span class="order-status ${order.status === 'preparing' ? 'status-preparing' : 'status-completed'}"><i class="fas ${order.status === 'preparing' ? 'fa-fire' : 'fa-check-circle'}"></i> ${order.status === 'preparing' ? 'قيد التحضير' : 'مكتمل'}</span>${order.notes ? `<div style="margin-top:8px;font-size:0.9em;color:var(--clay-brown);"><i class="fas fa-sticky-note"></i> ${order.notes}</div>` : ''}</div></div>`;
-            }).join('');
-        }
-
-        // -------------------- التقارير --------------------
-        function setDatePreset(preset, event) {
-            currentDatePreset = preset;
-            document.querySelectorAll('.preset-btn').forEach(btn => btn.classList.remove('active')); event.target.classList.add('active');
-            const today = new Date(); let start = new Date(); let end = new Date();
-            switch(preset) {
-                case 'today': start = new Date(today.setHours(0,0,0,0)); end = new Date(today.setHours(23,59,59,999)); break;
-                case 'yesterday': const y = new Date(today); y.setDate(y.getDate()-1); start = new Date(y.setHours(0,0,0,0)); end = new Date(y.setHours(23,59,59,999)); break;
-                case 'week': const fd = new Date(today.setDate(today.getDate()-today.getDay()+(today.getDay()===0?-6:1))); start = new Date(fd.setHours(0,0,0,0)); end = new Date(new Date().setHours(23,59,59,999)); break;
-                case 'month': start = new Date(today.getFullYear(), today.getMonth(), 1, 0,0,0); end = new Date(today.getFullYear(), today.getMonth()+1, 0, 23,59,59); break;
-                case 'year': start = new Date(today.getFullYear(), 0, 1, 0,0,0); end = new Date(today.getFullYear(), 11, 31, 23,59,59); break;
-                case 'all': start = new Date(2000,0,1); end = new Date(2100,11,31); break;
-            }
-            document.getElementById('startDate').value = start.toISOString().split('T')[0];
-            document.getElementById('endDate').value = end.toISOString().split('T')[0];
-            applyDateRange();
-        }
-        function applyDateRange() {
-            const start = new Date(document.getElementById('startDate').value);
-            const end = new Date(document.getElementById('endDate').value); end.setHours(23,59,59,999);
-            const filteredOrders = allOrders.filter(order => { const orderDate = new Date(order.timestamp); return orderDate >= start && orderDate <= end; });
-            renderReports(filteredOrders);
-        }
-        function renderReports(orders) {
-            if (!orders || orders.length === 0) {
-                document.getElementById('totalSales').innerHTML = '0 د.أ'; document.getElementById('totalProfit').innerHTML = '0 د.أ';
-                document.getElementById('totalOrders').innerHTML = '0'; document.getElementById('avgMargin').innerHTML = '0%';
-                document.querySelector('#topProductsTable tbody').innerHTML = '<tr><td colspan="6" class="empty-state">لا توجد مبيعات في هذه الفترة</td></tr>';
-                const ctx = document.getElementById('salesChart').getContext('2d');
-                if (salesChart) salesChart.destroy(); salesChart = new Chart(ctx, { type: 'line', data: { labels: [], datasets: [] }, options: { responsive: true, maintainAspectRatio: false } });
-                return;
-            }
-            const completedOrders = orders.filter(o => o.status === 'completed');
-            let totalSales = 0; let totalCost = 0; const totalOrders = completedOrders.length; const productMap = new Map();
-            completedOrders.forEach(order => {
-                totalSales += (order.total || 0);
-                (order.items || []).forEach(item => {
-                    let productId = item.productId; let name = item.name || 'منتج غير معروف';
-                    if (!productId) { const prodObj = appData.products.find(p => p.name === name); productId = prodObj ? prodObj.id : name; }
-                    const qty = item.quantity || 1; const price = item.price || 0; const revenue = price * qty;
-                    const productObj = appData.products.find(p => p.id === productId || p.name === name);
-                    const costPerUnit = productObj && productObj.cost ? productObj.cost : 0;
-                    const totalItemCost = costPerUnit * qty; totalCost += totalItemCost;
-                    if (productMap.has(productId)) { const existing = productMap.get(productId); existing.qty += qty; existing.revenue += revenue; existing.cost += totalItemCost; }
-                    else { productMap.set(productId, { name, qty, revenue, cost: totalItemCost }); }
-                });
-            });
-            const totalProfit = totalSales - totalCost; const avgMargin = totalSales > 0 ? ((totalProfit / totalSales) * 100) : 0;
-            document.getElementById('totalSales').innerHTML = totalSales.toFixed(2) + ' د.أ';
-            document.getElementById('totalProfit').innerHTML = totalProfit.toFixed(2) + ' د.أ';
-            document.getElementById('totalOrders').innerHTML = totalOrders;
-            document.getElementById('avgMargin').innerHTML = avgMargin.toFixed(1) + '%';
-            const topProducts = Array.from(productMap.values()).sort((a, b) => (b.revenue - b.cost) - (a.revenue - a.cost)).slice(0, 20);
-            document.querySelector('#topProductsTable tbody').innerHTML = topProducts.map(p => {
-                const profit = p.revenue - p.cost; const margin = p.revenue > 0 ? ((profit / p.revenue) * 100) : 0;
-                const profitClass = profit >= 0 ? 'profit-val' : 'loss-val';
-                return `<tr><td>${p.name}</td><td>${p.qty}</td><td>${p.revenue.toFixed(2)}</td><td>${p.cost.toFixed(2)}</td><td class="${profitClass}">${profit.toFixed(2)}</td><td>${margin.toFixed(1)}%</td></tr>`;
-            }).join('');
-            updateSalesChart(completedOrders);
-        }
-        function updateSalesChart(orders) {
-            const dailyMap = new Map();
-            orders.forEach(order => { const date = new Date(order.timestamp).toLocaleDateString('ar-EG'); const total = order.total || 0; dailyMap.set(date, (dailyMap.get(date) || 0) + total); });
-            const sortedDays = Array.from(dailyMap.entries()).sort((a, b) => new Date(a[0]) - new Date(b[0]));
-            const labels = sortedDays.map(d => d[0]); const data = sortedDays.map(d => d[1]);
-            const ctx = document.getElementById('salesChart').getContext('2d');
-            if (salesChart) salesChart.destroy();
-            salesChart = new Chart(ctx, { type: 'line', data: { labels: labels, datasets: [{ label: 'المبيعات (د.أ)', data: data, borderColor: '#2D5A27', backgroundColor: 'rgba(45,90,39,0.1)', tension: 0.3, fill: true }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } } });
-        }
-
-        // -------------------- المنيو --------------------
-        function renderCategories() {
-            const container = document.getElementById('categories'); const filter = document.getElementById('filterCategory');
-            if (filter) { filter.innerHTML = '<option value="">جميع الأصناف</option>' + appData.categories.map(c => `<option value="${c.id}">${c.name}</option>`).join(''); }
-            container.innerHTML = `<button class="sync-btn" onclick="openCategoryModal()" style="margin-bottom:15px;"><i class="fas fa-plus"></i> إضافة صنف</button>` + appData.categories.map(c => `<div class="item-card"><div class="item-info"><h3>${c.name}</h3><p>${c.description || ''}</p></div><div class="item-actions"><button class="edit-btn" onclick='editCategory(${JSON.stringify(c)})'><i class="fas fa-pen"></i></button><button class="delete-btn" onclick="deleteItem('categories','${c.id}')"><i class="fas fa-trash"></i></button></div></div>`).join('');
-        }
-        function renderProducts() {
-            const filter = document.getElementById('filterCategory').value; let filtered = appData.products;
-            if (filter) filtered = filtered.filter(p => p.categoryId === filter);
-            document.getElementById('productsList').innerHTML = filtered.map(p => {
-                const cat = appData.categories.find(c => c.id === p.categoryId);
-                const margin = p.cost ? ((p.price - p.cost) / p.price * 100).toFixed(0) : 0;
-                return `<div class="item-card"><div class="item-info"><h3>${p.name} ${p.isNew ? '<span style="color:green;">(جديد)</span>' : ''}</h3><p>${cat ? cat.name : 'غير مصنف'} | ${p.description}</p><div class="item-price">${p.price} د.أ</div>${p.cost ? `<div class="item-cost">التكلفة: ${p.cost} د.أ (هامش: ${margin}%)</div>` : ''}</div><div class="item-actions"><button class="edit-btn" onclick='editProduct(${JSON.stringify(p)})'><i class="fas fa-pen"></i></button><button class="delete-btn" onclick="deleteItem('products','${p.id}')"><i class="fas fa-trash"></i></button></div></div>`;
-            }).join('');
-        }
-        function openCategoryModal(item = { id: '', name: '', description: '', image: '', order: 0 }) {
-            editingItem = item.id ? item : null; document.getElementById('modalTitle').innerText = editingItem ? 'تعديل صنف' : 'إضافة صنف';
-            document.getElementById('editForm').innerHTML = `<div class="form-group"><label>الاسم</label><input type="text" id="cat_name" value="${item.name}"></div><div class="form-group"><label>الوصف</label><textarea id="cat_desc">${item.description}</textarea></div><div class="form-group"><label>رابط الصورة</label><input type="text" id="cat_image" value="${item.image}"></div><div class="form-group"><label>الترتيب</label><input type="number" id="cat_order" value="${item.order}"></div><button type="button" class="submit-form-btn" onclick="saveCategory()">حفظ</button>`;
-            document.getElementById('modalOverlay').classList.add('active');
-        }
-        window.editCategory = (item) => openCategoryModal(item);
-        function openProductModal(item = { id: '', categoryId: '', name: '', description: '', price: 0, cost: 0, image: '', isNew: false, order: 0 }) {
-            editingItem = item.id ? item : null; document.getElementById('modalTitle').innerText = editingItem ? 'تعديل منتج' : 'إضافة منتج';
-            let catOptions = appData.categories.map(c => `<option value="${c.id}" ${c.id === item.categoryId ? 'selected' : ''}>${c.name}</option>`).join('');
-            document.getElementById('editForm').innerHTML = `
-                <div class="form-group"><label>الصنف</label><select id="prod_catId">${catOptions}</select></div>
-                <div class="form-group"><label>الاسم</label><input type="text" id="prod_name" value="${item.name}"></div>
-                <div class="form-group"><label>الوصف</label><textarea id="prod_desc">${item.description}</textarea></div>
-                <div class="form-group"><label>سعر البيع</label><input type="number" step="0.1" id="prod_price" value="${item.price}"></div>
-                <div class="form-group"><label>تكلفة المنتج (للوحدة)</label><input type="number" step="0.1" id="prod_cost" value="${item.cost || 0}" placeholder="0.00"></div>
-                <div class="form-group"><label>رابط الصورة</label><input type="text" id="prod_image" value="${item.image}"></div>
-                <div class="form-group"><label>جديد</label><select id="prod_isNew"><option value="false" ${!item.isNew ? 'selected' : ''}>لا</option><option value="true" ${item.isNew ? 'selected' : ''}>نعم</option></select></div>
-                <div class="form-group"><label>الترتيب</label><input type="number" id="prod_order" value="${item.order}"></div>
-                <button type="button" class="submit-form-btn" onclick="saveProduct()">حفظ</button>
-            `;
-            document.getElementById('modalOverlay').classList.add('active');
-        }
-        window.editProduct = (item) => openProductModal(item);
-        function closeModal() { document.getElementById('modalOverlay').classList.remove('active'); }
-        function generateId() { return 'id_' + Date.now() + Math.random().toString(36).substr(2,6); }
-        async function saveCategory() {
-            const data = { id: editingItem ? editingItem.id : generateId(), name: document.getElementById('cat_name').value, description: document.getElementById('cat_desc').value, image: document.getElementById('cat_image').value, order: parseInt(document.getElementById('cat_order').value) || 0 };
-            if (editingItem) { const idx = appData.categories.findIndex(c => c.id === editingItem.id); appData.categories[idx] = data; } else { appData.categories.push(data); }
-            renderCategories(); closeModal(); await saveToServer('categories');
-        }
-        async function saveProduct() {
-            const costVal = parseFloat(document.getElementById('prod_cost').value) || 0;
-            const data = { id: editingItem ? editingItem.id : generateId(), categoryId: document.getElementById('prod_catId').value, name: document.getElementById('prod_name').value, description: document.getElementById('prod_desc').value, price: parseFloat(document.getElementById('prod_price').value), cost: costVal, image: document.getElementById('prod_image').value, isNew: document.getElementById('prod_isNew').value === 'true', order: parseInt(document.getElementById('prod_order').value) || 0 };
-            // Removed local storage backup for cost - relying on server save
-            if (editingItem) { const idx = appData.products.findIndex(p => p.id === editingItem.id); appData.products[idx] = data; } else { appData.products.push(data); }
-            renderProducts(); closeModal(); await saveToServer('products');
-        }
-        window.deleteItem = async function(type, id) {
-            if (!confirm('تأكيد الحذف؟')) return;
-            // Removed local storage cleanup for product costs as we use server storage now
-            appData[type] = appData[type].filter(item => item.id !== id);
-            if (type === 'categories') renderCategories(); else renderProducts();
-            await saveToServer(type);
-        };
-        async function saveToServer(type) {
-            try {
-                const formData = new URLSearchParams();
-                formData.append('action', type === 'categories' ? 'saveCategories' : 'saveProducts');
-                formData.append('data', JSON.stringify(appData[type]));
-                await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: formData });
-                showToast('تم الحفظ');
-            } catch (e) { showToast('خطأ في الحفظ'); }
-        }
-        async function fetchData() {
-            try {
-                const res = await fetch(`${SCRIPT_URL}?action=getMenuData`); const data = await res.json();
-                if (data.success) {
-                    appData.categories = data.categories || []; appData.products = data.products || [];
-                    // Use server cost directly, default to 0 if missing
-                    appData.products.forEach(p => { if (typeof p.cost === 'undefined' || p.cost === null) { p.cost = 0; } });
-                    renderCategories(); renderProducts(); loadInventoryFromStorage(); if (currentTab === 'inventory') renderInventory();
+                // محاولة تنفيذ العمليات المعلقة
+                async processOfflineQueue() {
+                    if (AppState.offlineQueue.length === 0) return;
+                    Utils.showToast('جاري مزامنة العمليات المحلية...');
+                    for (const item of AppState.offlineQueue) {
+                        try {
+                            if (item.action === 'saveCategory' || item.action === 'saveProduct' || item.action === 'deleteItem') {
+                                await API.saveToServer(item.data.type, item.data.data);
+                            }
+                            // يمكن إضافة المزيد من الإجراءات
+                        } catch (e) {
+                            console.error('فشل تنفيذ عملية مؤجلة:', e);
+                        }
+                    }
+                    AppState.offlineQueue = [];
+                    Utils.showToast('تمت المزامنة بنجاح');
                 }
-            } catch (e) { console.error(e); showToast('فشل الاتصال بسيرفر المنيو'); }
-        }
-        function refreshAllData() { fetchData(); loadOrders(false); }
-        function attemptLogin() {
-            const u = document.getElementById('username').value; const p = document.getElementById('password').value;
-            if (u === CREDENTIALS.user && p === CREDENTIALS.pass) {
-                document.getElementById('loginScreen').style.display = 'none';
-                document.getElementById('postLoginWrapper').style.display = 'flex';
-                document.getElementById('appContainer').classList.add('active');
-                fetchData(); loadOrders(false); initSalesDates();
-            } else { document.getElementById('errorMsg').style.display = 'block'; }
-        }
-        function logout() {
-            document.getElementById('appContainer').classList.remove('active');
-            document.getElementById('postLoginWrapper').style.display = 'none';
-            document.getElementById('loginScreen').style.display = 'block';
-        }
-        function switchTab(tab) {
-            currentTab = tab;
-            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-            document.querySelector(`.tab-btn[onclick*="${tab}"]`).classList.add('active');
-            document.getElementById(tab).classList.add('active');
-            if (tab === 'sales') { loadOrders(false); } else if (tab === 'reports') { loadOrders(false); } else if (tab === 'inventory') { loadInventoryFromStorage(); renderInventory(); }
-        }
-        function showToast(msg) {
-            const toast = document.createElement('div'); toast.className = 'toast'; toast.innerText = msg; document.body.appendChild(toast); setTimeout(() => toast.remove(), 2000);
-        }
-        document.addEventListener('DOMContentLoaded', createLeaves);
+            };
+
+            // ---------- التعامل مع API ----------
+            const API = {
+                async fetchMenu() {
+                    try {
+                        const data = await Utils.fetchWithRetry(`${CONFIG.SCRIPT_URL}?action=getMenuData&_=${Date.now()}`);
+                        if (data.success) {
+                            AppState.categories = data.categories || [];
+                            AppState.products = (data.products || []).map(p => ({ ...p, cost: p.cost || 0 }));
+                            // تحديث الكاش
+                            Utils.setSecureItem(CONFIG.STORAGE_KEYS.MENU_CACHE, { categories: AppState.categories, products: AppState.products });
+                            return true;
+                        }
+                        throw new Error('استجابة غير صالحة');
+                    } catch (error) {
+                        Utils.showToast('فشل تحميل المنيو، استخدام البيانات المخزنة', true);
+                        const cached = Utils.getSecureItem(CONFIG.STORAGE_KEYS.MENU_CACHE);
+                        if (cached) {
+                            AppState.categories = cached.categories || [];
+                            AppState.products = cached.products || [];
+                        }
+                        return false;
+                    }
+                },
+
+                async saveToServer(type, data) {
+                    // type: 'categories' أو 'products'
+                    const action = type === 'categories' ? 'saveCategories' : 'saveProducts';
+                    const formData = new URLSearchParams();
+                    formData.append('action', action);
+                    formData.append('data', JSON.stringify(data));
+
+                    try {
+                        const result = await Utils.fetchWithRetry(CONFIG.SCRIPT_URL, {
+                            method: 'POST',
+                            body: formData
+                        });
+                        if (result.success) {
+                            Utils.showToast('تم الحفظ بنجاح');
+                            // تحديث الكاش
+                            const cache = Utils.getSecureItem(CONFIG.STORAGE_KEYS.MENU_CACHE) || {};
+                            cache[type] = data;
+                            Utils.setSecureItem(CONFIG.STORAGE_KEYS.MENU_CACHE, cache);
+                            return true;
+                        } else {
+                            throw new Error(result.error || 'خطأ في الحفظ');
+                        }
+                    } catch (error) {
+                        Utils.showToast('فشل الحفظ على السيرفر، تم حفظه محلياً', true);
+                        // إضافة إلى قائمة الانتظار
+                        Utils.addToQueue('save', { type, data });
+                        return false;
+                    }
+                },
+
+                async loadOrders(forceRefresh = false) {
+                    if (!forceRefresh) {
+                        const cached = Utils.getSecureItem(CONFIG.STORAGE_KEYS.ORDERS_CACHE);
+                        if (cached) {
+                            AppState.allOrders = cached;
+                            return;
+                        }
+                    }
+                    try {
+                        const data = await Utils.fetchWithRetry(`${CONFIG.KITCHEN_API_URL}?action=getOrders&status=all&_=${Date.now()}`);
+                        if (data.success && data.orders) {
+                            AppState.allOrders = data.orders.map(order => ({
+                                orderId: order.orderId || order.id || 'غير معروف',
+                                timestamp: order.timestamp || order.date || order.time || new Date().toISOString(),
+                                tableNumber: order.tableNumber || order.table || '?',
+                                notes: order.notes || '',
+                                total: Number(order.total) || 0,
+                                items: Array.isArray(order.items) ? order.items.map(item => {
+                                    const product = AppState.products.find(p => p.name === item.name);
+                                    return {
+                                        productId: product ? product.id : null,
+                                        name: item.name || 'منتج',
+                                        quantity: Number(item.quantity) || 1,
+                                        price: Number(item.price) || 0
+                                    };
+                                }) : [],
+                                status: order.status || 'preparing'
+                            }));
+                            Utils.setSecureItem(CONFIG.STORAGE_KEYS.ORDERS_CACHE, AppState.allOrders);
+                            localStorage.setItem(CONFIG.STORAGE_KEYS.ORDERS_TIMESTAMP, new Date().toISOString());
+                        } else {
+                            throw new Error('بيانات الطلبات غير صحيحة');
+                        }
+                    } catch (error) {
+                        Utils.showToast('تعذر تحميل الطلبات، استخدام المحفوظة', true);
+                        const cached = Utils.getSecureItem(CONFIG.STORAGE_KEYS.ORDERS_CACHE);
+                        if (cached) AppState.allOrders = cached;
+                    }
+                }
+            };
+
+            // ---------- إدارة المخزون ----------
+            const InventoryManager = {
+                load() {
+                    const stored = Utils.getSecureItem(CONFIG.STORAGE_KEYS.INVENTORY);
+                    if (stored) {
+                        AppState.inventoryData = stored;
+                    } else {
+                        AppState.inventoryData = AppState.products.map(p => ({
+                            productId: p.id,
+                            openingStock: 0,
+                            actualStock: 0,
+                            lastCountDate: null
+                        }));
+                    }
+                    this.mergeWithProducts();
+                },
+
+                save() {
+                    Utils.setSecureItem(CONFIG.STORAGE_KEYS.INVENTORY, AppState.inventoryData);
+                },
+
+                mergeWithProducts() {
+                    const existingIds = new Set(AppState.inventoryData.map(i => i.productId));
+                    const newItems = AppState.products.filter(p => !existingIds.has(p.id)).map(p => ({
+                        productId: p.id,
+                        openingStock: 0,
+                        actualStock: 0,
+                        lastCountDate: null
+                    }));
+                    if (newItems.length > 0) {
+                        AppState.inventoryData.push(...newItems);
+                        this.save();
+                    }
+                },
+
+                calculateSold() {
+                    const completedOrders = AppState.allOrders.filter(o => o.status === 'completed');
+                    const totalSoldMap = new Map();
+                    const todaySoldMap = new Map();
+                    const todayStart = new Date(); todayStart.setHours(0,0,0,0);
+                    completedOrders.forEach(order => {
+                        (order.items || []).forEach(item => {
+                            if (item.productId) {
+                                const qty = item.quantity || 0;
+                                totalSoldMap.set(item.productId, (totalSoldMap.get(item.productId) || 0) + qty);
+                                const orderDate = new Date(order.timestamp);
+                                if (orderDate >= todayStart) {
+                                    todaySoldMap.set(item.productId, (todaySoldMap.get(item.productId) || 0) + qty);
+                                }
+                            }
+                        });
+                    });
+                    return { totalSoldMap, todaySoldMap };
+                },
+
+                renderTable() {
+                    const tbody = document.getElementById('inventoryTableBody');
+                    if (!tbody) return;
+                    if (!AppState.products.length) {
+                        tbody.innerHTML = '<tr><td colspan="7" class="empty-state">لا توجد منتجات</td></tr>';
+                        return;
+                    }
+                    const { totalSoldMap, todaySoldMap } = this.calculateSold();
+                    tbody.innerHTML = AppState.products.map(product => {
+                        const inv = AppState.inventoryData.find(i => i.productId === product.id) || { openingStock: 0, actualStock: 0, lastCountDate: null };
+                        const totalSold = totalSoldMap.get(product.id) || 0;
+                        const todaySold = todaySoldMap.get(product.id) || 0;
+                        const theoretical = (inv.openingStock || 0) - totalSold;
+                        const actual = inv.actualStock || 0;
+                        const diff = theoretical - actual;
+                        const diffClass = diff > 0 ? 'diff-positive' : (diff < 0 ? 'diff-negative' : '');
+                        const lastCount = inv.lastCountDate ? new Date(inv.lastCountDate).toLocaleDateString('ar-EG') : 'لم يسجل';
+                        return `<tr>
+                            <td>${product.name}</td>
+                            <td>${todaySold}</td>
+                            <td>${totalSold}</td>
+                            <td>${theoretical}</td>
+                            <td>${actual}</td>
+                            <td class="${diffClass}">${diff > 0 ? '+' : ''}${diff}</td>
+                            <td>${lastCount}</td>
+                        </tr>`;
+                    }).join('');
+                },
+
+                openCountModal() {
+                    const tbody = document.getElementById('inventoryCountTable');
+                    if (!tbody) return;
+                    tbody.innerHTML = AppState.products.map(product => {
+                        const inv = AppState.inventoryData.find(i => i.productId === product.id) || { actualStock: 0 };
+                        return `<tr>
+                            <td>${product.name}</td>
+                            <td><input type="number" min="0" step="1" value="${inv.actualStock}" class="qty-input" id="count-${product.id}"></td>
+                        </tr>`;
+                    }).join('');
+                    document.getElementById('inventoryModal').classList.add('active');
+                },
+
+                submitCount() {
+                    const inputs = document.querySelectorAll('#inventoryCountTable input');
+                    inputs.forEach(input => {
+                        const productId = input.id.replace('count-', '');
+                        const qty = parseInt(input.value) || 0;
+                        let inv = AppState.inventoryData.find(i => i.productId === productId);
+                        if (!inv) {
+                            inv = { productId, openingStock: 0, actualStock: qty, lastCountDate: new Date().toISOString() };
+                            AppState.inventoryData.push(inv);
+                        } else {
+                            inv.actualStock = qty;
+                            inv.lastCountDate = new Date().toISOString();
+                        }
+                    });
+                    this.save();
+                    this.renderTable();
+                    document.getElementById('inventoryModal').classList.remove('active');
+                    Utils.showToast('تم تحديث المخزون الفعلي');
+                },
+
+                resetOpeningStock() {
+                    if (!confirm('إعادة تعيين المخزون الافتتاحي للصفر؟')) return;
+                    AppState.inventoryData.forEach(i => i.openingStock = 0);
+                    this.save();
+                    this.renderTable();
+                    Utils.showToast('تم إعادة التعيين');
+                },
+
+                resetFull() {
+                    if (!confirm('سيتم تصفير المخزون والمبيعات بشكل دائم. هل أنت متأكد؟')) return;
+                    AppState.allOrders = AppState.allOrders.filter(o => o.status !== 'completed');
+                    AppState.inventoryData.forEach(i => {
+                        i.openingStock = 0;
+                        i.actualStock = 0;
+                        i.lastCountDate = new Date().toISOString();
+                    });
+                    this.save();
+                    Utils.setSecureItem(CONFIG.STORAGE_KEYS.ORDERS_CACHE, AppState.allOrders);
+                    this.renderTable();
+                    if (typeof SalesManager !== 'undefined') SalesManager.applyFilter();
+                    Utils.showToast('تم التصفير');
+                },
+
+                exportData() {
+                    const dataStr = JSON.stringify(AppState.inventoryData, null, 2);
+                    const blob = new Blob([dataStr], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `inventory_${new Date().toISOString().split('T')[0]}.json`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                },
+
+                importData() {
+                    const input = document.createElement('input');
+                    input.type = 'file';
+                    input.accept = '.json';
+                    input.onchange = e => {
+                        const file = e.target.files[0];
+                        const reader = new FileReader();
+                        reader.onload = event => {
+                            try {
+                                const data = Utils.safeJSONParse(event.target.result, []);
+                                if (Array.isArray(data)) {
+                                    AppState.inventoryData = data;
+                                    this.mergeWithProducts();
+                                    this.save();
+                                    this.renderTable();
+                                    Utils.showToast('تم الاستيراد بنجاح');
+                                } else {
+                                    Utils.showToast('ملف غير صالح', true);
+                                }
+                            } catch (ex) {
+                                Utils.showToast('خطأ في قراءة الملف', true);
+                            }
+                        };
+                        reader.readAsText(file);
+                    };
+                    input.click();
+                }
+            };
+
+            // ---------- إدارة المبيعات والتصفية ----------
+            const SalesManager = {
+                filterStatus: 'all',
+                dateFrom: null,
+                dateTo: null,
+
+                initDates() {
+                    const today = new Date();
+                    const sevenDaysAgo = new Date(today);
+                    sevenDaysAgo.setDate(today.getDate() - 7);
+                    document.getElementById('salesDateFrom').value = sevenDaysAgo.toISOString().split('T')[0];
+                    document.getElementById('salesDateTo').value = today.toISOString().split('T')[0];
+                },
+
+                applyFilter() {
+                    const fromStr = document.getElementById('salesDateFrom').value;
+                    const toStr = document.getElementById('salesDateTo').value;
+                    this.dateFrom = fromStr ? new Date(fromStr) : null;
+                    this.dateTo = toStr ? new Date(toStr) : null;
+                    if (this.dateTo) this.dateTo.setHours(23,59,59,999);
+                    this.render();
+                },
+
+                setPreset(preset) {
+                    const today = new Date();
+                    let from, to;
+                    switch (preset) {
+                        case 'today':
+                            from = new Date(today.setHours(0,0,0,0));
+                            to = new Date(today.setHours(23,59,59,999));
+                            break;
+                        case 'yesterday':
+                            const y = new Date(today);
+                            y.setDate(y.getDate()-1);
+                            from = new Date(y.setHours(0,0,0,0));
+                            to = new Date(y.setHours(23,59,59,999));
+                            break;
+                        case 'week':
+                            const fd = new Date(today);
+                            fd.setDate(today.getDate() - today.getDay() + (today.getDay()===0?-6:1));
+                            from = new Date(fd.setHours(0,0,0,0));
+                            to = new Date(new Date().setHours(23,59,59,999));
+                            break;
+                        case 'month':
+                            from = new Date(today.getFullYear(), today.getMonth(), 1, 0,0,0);
+                            to = new Date(today.getFullYear(), today.getMonth()+1, 0, 23,59,59);
+                            break;
+                        case 'all':
+                            from = null; to = null; break;
+                    }
+                    if (from) {
+                        document.getElementById('salesDateFrom').value = from.toISOString().split('T')[0];
+                        document.getElementById('salesDateTo').value = to.toISOString().split('T')[0];
+                    } else {
+                        document.getElementById('salesDateFrom').value = '';
+                        document.getElementById('salesDateTo').value = '';
+                    }
+                    this.applyFilter();
+                },
+
+                render() {
+                    const container = document.getElementById('salesList');
+                    if (!container) return;
+                    let filtered = AppState.allOrders;
+                    const status = document.getElementById('salesStatusFilter').value;
+                    if (status !== 'all') filtered = filtered.filter(o => o.status === status);
+                    if (this.dateFrom) filtered = filtered.filter(o => new Date(o.timestamp) >= this.dateFrom);
+                    if (this.dateTo) filtered = filtered.filter(o => new Date(o.timestamp) <= this.dateTo);
+                    filtered.sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+                    if (filtered.length === 0) {
+                        container.innerHTML = `<div class="empty-state"><i class="fas fa-receipt"></i><h3>لا توجد طلبات</h3></div>`;
+                        return;
+                    }
+                    container.innerHTML = filtered.map(order => {
+                        const items = order.items || [];
+                        const timeStr = Utils.formatDate(order.timestamp);
+                        const total = order.total.toFixed(2);
+                        return `<div class="order-card">
+                            <div class="order-header"><span>${order.orderId}</span><span>${timeStr}</span></div>
+                            <div class="order-body">
+                                <div><i class="fas fa-chair"></i> طاولة: ${order.tableNumber}</div>
+                                <div class="order-items-list">${items.map(item => `<div class="order-item-row"><span>${item.name}</span><span>x${item.quantity} (${(item.price*item.quantity).toFixed(2)} د.أ)</span></div>`).join('')}</div>
+                                <div class="order-total">الإجمالي: ${total} د.أ</div>
+                                <span class="order-status ${order.status === 'preparing' ? 'status-preparing' : 'status-completed'}"><i class="fas ${order.status==='preparing'?'fa-fire':'fa-check-circle'}"></i> ${order.status==='preparing'?'قيد التحضير':'مكتمل'}</span>
+                                ${order.notes ? `<div><i class="fas fa-sticky-note"></i> ${order.notes}</div>` : ''}
+                            </div>
+                        </div>`;
+                    }).join('');
+                }
+            };
+
+            // ---------- إدارة التقارير ----------
+            const ReportsManager = {
+                currentPreset: 'today',
+
+                setPreset(preset, event) {
+                    if (event) {
+                        document.querySelectorAll('.preset-btn').forEach(btn => btn.classList.remove('active'));
+                        event.target.classList.add('active');
+                    }
+                    this.currentPreset = preset;
+                    const today = new Date();
+                    let start, end;
+                    switch (preset) {
+                        case 'today':
+                            start = new Date(today.setHours(0,0,0,0));
+                            end = new Date(today.setHours(23,59,59,999));
+                            break;
+                        case 'yesterday':
+                            const y = new Date(today); y.setDate(y.getDate()-1);
+                            start = new Date(y.setHours(0,0,0,0));
+                            end = new Date(y.setHours(23,59,59,999));
+                            break;
+                        case 'week':
+                            const fd = new Date(today);
+                            fd.setDate(today.getDate() - today.getDay() + (today.getDay()===0?-6:1));
+                            start = new Date(fd.setHours(0,0,0,0));
+                            end = new Date(new Date().setHours(23,59,59,999));
+                            break;
+                        case 'month':
+                            start = new Date(today.getFullYear(), today.getMonth(), 1, 0,0,0);
+                            end = new Date(today.getFullYear(), today.getMonth()+1, 0, 23,59,59);
+                            break;
+                        case 'year':
+                            start = new Date(today.getFullYear(), 0, 1, 0,0,0);
+                            end = new Date(today.getFullYear(), 11, 31, 23,59,59);
+                            break;
+                        case 'all':
+                            start = new Date(2000,0,1);
+                            end = new Date(2100,11,31);
+                            break;
+                    }
+                    document.getElementById('startDate').value = start.toISOString().split('T')[0];
+                    document.getElementById('endDate').value = end.toISOString().split('T')[0];
+                    this.applyRange();
+                },
+
+                applyRange() {
+                    const startStr = document.getElementById('startDate').value;
+                    const endStr = document.getElementById('endDate').value;
+                    if (!startStr || !endStr) return Utils.showToast('حدد التاريخ', true);
+                    const start = new Date(startStr); start.setHours(0,0,0,0);
+                    const end = new Date(endStr); end.setHours(23,59,59,999);
+                    const filtered = AppState.allOrders.filter(o => {
+                        const d = new Date(o.timestamp);
+                        return d >= start && d <= end;
+                    });
+                    this.render(filtered);
+                },
+
+                render(orders) {
+                    const completed = orders.filter(o => o.status === 'completed');
+                    let totalSales = 0, totalCost = 0;
+                    const productMap = new Map();
+
+                    completed.forEach(order => {
+                        totalSales += order.total || 0;
+                        (order.items || []).forEach(item => {
+                            let pid = item.productId;
+                            if (!pid) {
+                                const prod = AppState.products.find(p => p.name === item.name);
+                                pid = prod ? prod.id : item.name;
+                            }
+                            const qty = item.quantity || 1;
+                            const price = item.price || 0;
+                            const rev = price * qty;
+                            const prodObj = AppState.products.find(p => p.id === pid || p.name === item.name);
+                            const cost = prodObj && prodObj.cost ? prodObj.cost * qty : 0;
+                            totalCost += cost;
+
+                            if (productMap.has(pid)) {
+                                const p = productMap.get(pid);
+                                p.qty += qty;
+                                p.rev += rev;
+                                p.cost += cost;
+                            } else {
+                                productMap.set(pid, { name: item.name, qty, rev, cost });
+                            }
+                        });
+                    });
+
+                    const totalProfit = totalSales - totalCost;
+                    const avgMargin = totalSales > 0 ? (totalProfit / totalSales) * 100 : 0;
+
+                    document.getElementById('totalSales').innerHTML = totalSales.toFixed(2) + ' د.أ';
+                    document.getElementById('totalProfit').innerHTML = totalProfit.toFixed(2) + ' د.أ';
+                    document.getElementById('totalOrders').innerHTML = completed.length;
+                    document.getElementById('avgMargin').innerHTML = avgMargin.toFixed(1) + '%';
+
+                    const topProducts = Array.from(productMap.values()).sort((a,b) => (b.rev - b.cost) - (a.rev - a.cost)).slice(0,20);
+                    const tbody = document.querySelector('#topProductsTable tbody');
+                    if (tbody) {
+                        tbody.innerHTML = topProducts.map(p => {
+                            const profit = p.rev - p.cost;
+                            const margin = p.rev > 0 ? (profit / p.rev) * 100 : 0;
+                            const cls = profit >= 0 ? 'profit-val' : 'loss-val';
+                            return `<tr>
+                                <td>${p.name}</td>
+                                <td>${p.qty}</td>
+                                <td>${p.rev.toFixed(2)}</td>
+                                <td>${p.cost.toFixed(2)}</td>
+                                <td class="${cls}">${profit.toFixed(2)}</td>
+                                <td>${margin.toFixed(1)}%</td>
+                            </tr>`;
+                        }).join('');
+                    }
+
+                    this.updateChart(completed);
+                },
+
+                updateChart(orders) {
+                    const dailyMap = new Map();
+                    orders.forEach(o => {
+                        const date = new Date(o.timestamp).toLocaleDateString('ar-EG');
+                        dailyMap.set(date, (dailyMap.get(date) || 0) + (o.total || 0));
+                    });
+                    const sorted = Array.from(dailyMap.entries()).sort((a,b) => new Date(a[0]) - new Date(b[0]));
+                    const labels = sorted.map(d => d[0]);
+                    const data = sorted.map(d => d[1]);
+
+                    const ctx = document.getElementById('salesChart').getContext('2d');
+                    if (AppState.salesChart) AppState.salesChart.destroy();
+                    AppState.salesChart = new Chart(ctx, {
+                        type: 'line',
+                        data: { labels, datasets: [{ label: 'المبيعات (د.أ)', data, borderColor: '#2D5A27', backgroundColor: 'rgba(45,90,39,0.1)', tension: 0.3, fill: true }] },
+                        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+                    });
+                }
+            };
+
+            // ---------- إدارة المنيو (الأصناف والمنتجات) ----------
+            const MenuManager = {
+                renderCategories() {
+                    const container = document.getElementById('categories');
+                    const filter = document.getElementById('filterCategory');
+                    if (filter) {
+                        filter.innerHTML = '<option value="">جميع الأصناف</option>' +
+                            AppState.categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+                    }
+                    container.innerHTML = `
+                        <button class="sync-btn" onclick="MenuManager.openCategoryModal()" style="margin-bottom:15px;"><i class="fas fa-plus"></i> إضافة صنف</button>
+                        ${AppState.categories.map(c => `
+                            <div class="item-card">
+                                <div class="item-info"><h3>${c.name}</h3><p>${c.description || ''}</p></div>
+                                <div class="item-actions">
+                                    <button class="edit-btn" onclick='MenuManager.editCategory(${JSON.stringify(c).replace(/'/g, "\\'")})'><i class="fas fa-pen"></i></button>
+                                    <button class="delete-btn" onclick="MenuManager.deleteItem('categories','${c.id}')"><i class="fas fa-trash"></i></button>
+                                </div>
+                            </div>
+                        `).join('')}
+                    `;
+                },
+
+                renderProducts() {
+                    const filter = document.getElementById('filterCategory').value;
+                    let filtered = AppState.products;
+                    if (filter) filtered = filtered.filter(p => p.categoryId === filter);
+                    document.getElementById('productsList').innerHTML = filtered.map(p => {
+                        const cat = AppState.categories.find(c => c.id === p.categoryId);
+                        const margin = p.cost ? ((p.price - p.cost) / p.price * 100).toFixed(0) : 0;
+                        return `<div class="item-card">
+                            <div class="item-info"><h3>${p.name} ${p.isNew ? '<span style="color:green;">(جديد)</span>' : ''}</h3>
+                            <p>${cat ? cat.name : 'غير مصنف'} | ${p.description}</p>
+                            <div class="item-price">${p.price} د.أ</div>
+                            ${p.cost ? `<div class="item-cost">التكلفة: ${p.cost} د.أ (هامش: ${margin}%)</div>` : ''}</div>
+                            <div class="item-actions">
+                                <button class="edit-btn" onclick='MenuManager.editProduct(${JSON.stringify(p).replace(/'/g, "\\'")})'><i class="fas fa-pen"></i></button>
+                                <button class="delete-btn" onclick="MenuManager.deleteItem('products','${p.id}')"><i class="fas fa-trash"></i></button>
+                            </div>
+                        </div>`;
+                    }).join('');
+                },
+
+                openCategoryModal(item = { id: '', name: '', description: '', image: '', order: 0 }) {
+                    AppState.editingItem = item.id ? item : null;
+                    document.getElementById('modalTitle').innerText = AppState.editingItem ? 'تعديل صنف' : 'إضافة صنف';
+                    document.getElementById('editForm').innerHTML = `
+                        <div class="form-group"><label>الاسم</label><input type="text" id="cat_name" value="${item.name}"></div>
+                        <div class="form-group"><label>الوصف</label><textarea id="cat_desc">${item.description}</textarea></div>
+                        <div class="form-group"><label>رابط الصورة</label><input type="text" id="cat_image" value="${item.image}"></div>
+                        <div class="form-group"><label>الترتيب</label><input type="number" id="cat_order" value="${item.order}"></div>
+                        <button type="button" class="submit-form-btn" onclick="MenuManager.saveCategory()">حفظ</button>
+                    `;
+                    document.getElementById('modalOverlay').classList.add('active');
+                },
+
+                async saveCategory() {
+                    const data = {
+                        id: AppState.editingItem ? AppState.editingItem.id : Utils.generateId(),
+                        name: document.getElementById('cat_name').value,
+                        description: document.getElementById('cat_desc').value,
+                        image: document.getElementById('cat_image').value,
+                        order: parseInt(document.getElementById('cat_order').value) || 0
+                    };
+                    if (AppState.editingItem) {
+                        const idx = AppState.categories.findIndex(c => c.id === AppState.editingItem.id);
+                        AppState.categories[idx] = data;
+                    } else {
+                        AppState.categories.push(data);
+                    }
+                    this.renderCategories();
+                    App.UI.closeModal();
+                    await API.saveToServer('categories', AppState.categories);
+                },
+
+                editCategory(item) { this.openCategoryModal(item); },
+
+                openProductModal(item = { id: '', categoryId: '', name: '', description: '', price: 0, cost: 0, image: '', isNew: false, order: 0 }) {
+                    AppState.editingItem = item.id ? item : null;
+                    document.getElementById('modalTitle').innerText = AppState.editingItem ? 'تعديل منتج' : 'إضافة منتج';
+                    const catOptions = AppState.categories.map(c => `<option value="${c.id}" ${c.id === item.categoryId ? 'selected' : ''}>${c.name}</option>`).join('');
+                    document.getElementById('editForm').innerHTML = `
+                        <div class="form-group"><label>الصنف</label><select id="prod_catId">${catOptions}</select></div>
+                        <div class="form-group"><label>الاسم</label><input type="text" id="prod_name" value="${item.name}"></div>
+                        <div class="form-group"><label>الوصف</label><textarea id="prod_desc">${item.description}</textarea></div>
+                        <div class="form-group"><label>سعر البيع</label><input type="number" step="0.1" id="prod_price" value="${item.price}"></div>
+                        <div class="form-group"><label>تكلفة المنتج (للوحدة)</label><input type="number" step="0.1" id="prod_cost" value="${item.cost || 0}"></div>
+                        <div class="form-group"><label>رابط الصورة</label><input type="text" id="prod_image" value="${item.image}"></div>
+                        <div class="form-group"><label>جديد</label><select id="prod_isNew"><option value="false" ${!item.isNew ? 'selected' : ''}>لا</option><option value="true" ${item.isNew ? 'selected' : ''}>نعم</option></select></div>
+                        <div class="form-group"><label>الترتيب</label><input type="number" id="prod_order" value="${item.order}"></div>
+                        <button type="button" class="submit-form-btn" onclick="MenuManager.saveProduct()">حفظ</button>
+                    `;
+                    document.getElementById('modalOverlay').classList.add('active');
+                },
+
+                async saveProduct() {
+                    const data = {
+                        id: AppState.editingItem ? AppState.editingItem.id : Utils.generateId(),
+                        categoryId: document.getElementById('prod_catId').value,
+                        name: document.getElementById('prod_name').value,
+                        description: document.getElementById('prod_desc').value,
+                        price: parseFloat(document.getElementById('prod_price').value) || 0,
+                        cost: parseFloat(document.getElementById('prod_cost').value) || 0,
+                        image: document.getElementById('prod_image').value,
+                        isNew: document.getElementById('prod_isNew').value === 'true',
+                        order: parseInt(document.getElementById('prod_order').value) || 0
+                    };
+                    if (AppState.editingItem) {
+                        const idx = AppState.products.findIndex(p => p.id === AppState.editingItem.id);
+                        AppState.products[idx] = data;
+                    } else {
+                        AppState.products.push(data);
+                        // إضافة للمخزون
+                        AppState.inventoryData.push({
+                            productId: data.id,
+                            openingStock: 0,
+                            actualStock: 0,
+                            lastCountDate: null
+                        });
+                        InventoryManager.save();
+                    }
+                    this.renderProducts();
+                    App.UI.closeModal();
+                    await API.saveToServer('products', AppState.products);
+                },
+
+                editProduct(item) { this.openProductModal(item); },
+
+                async deleteItem(type, id) {
+                    if (!confirm('تأكيد الحذف؟')) return;
+                    if (type === 'products') {
+                        AppState.inventoryData = AppState.inventoryData.filter(i => i.productId !== id);
+                        InventoryManager.save();
+                    }
+                    AppState[type] = AppState[type].filter(item => item.id !== id);
+                    if (type === 'categories') this.renderCategories();
+                    else this.renderProducts();
+                    await API.saveToServer(type, AppState[type]);
+                }
+            };
+
+            // ---------- واجهة المستخدم والتحكم العام ----------
+            const UI = {
+                closeModal() {
+                    document.getElementById('modalOverlay').classList.remove('active');
+                },
+
+                closeInventoryModal() {
+                    document.getElementById('inventoryModal').classList.remove('active');
+                },
+
+                buildContentArea() {
+                    // يتم استدعاؤها عند التبديل بين التبويبات
+                },
+
+                switchTab(tab) {
+                    AppState.currentTab = tab;
+                    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+                    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+
+                    // إعادة بناء المحتوى حسب التبويب
+                    const content = document.getElementById('contentArea');
+                    if (tab === 'categories') {
+                        content.innerHTML = `<div class="tab-content active" id="categories"></div>`;
+                        MenuManager.renderCategories();
+                    } else if (tab === 'products') {
+                        content.innerHTML = `
+                            <div class="tab-content active" id="products">
+                                <select id="filterCategory" class="input-field" style="margin-bottom: 15px;" onchange="MenuManager.renderProducts()"><option value="">جميع الأصناف</option></select>
+                                <div id="productsList"></div>
+                                <button class="sync-btn" onclick="MenuManager.openProductModal()"><i class="fas fa-plus"></i> إضافة منتج</button>
+                            </div>
+                        `;
+                        // تعبئة خيارات الأصناف
+                        const filter = document.getElementById('filterCategory');
+                        if (filter) {
+                            filter.innerHTML = '<option value="">جميع الأصناف</option>' +
+                                AppState.categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+                        }
+                        MenuManager.renderProducts();
+                    } else if (tab === 'sales') {
+                        content.innerHTML = `
+                            <div class="tab-content active" id="sales">
+                                <div class="sales-header">
+                                    <div class="sales-filter-row">
+                                        <select id="salesStatusFilter" class="filter-select" onchange="SalesManager.applyFilter()">
+                                            <option value="all">جميع الطلبات</option>
+                                            <option value="preparing">قيد التحضير</option>
+                                            <option value="completed">مكتملة</option>
+                                        </select>
+                                        <div class="date-picker">
+                                            <label>من:</label> <input type="date" id="salesDateFrom" class="date-input">
+                                            <label>إلى:</label> <input type="date" id="salesDateTo" class="date-input">
+                                        </div>
+                                        <div class="date-preset-buttons">
+                                            <button class="date-preset-btn" onclick="SalesManager.setPreset('today')">اليوم</button>
+                                            <button class="date-preset-btn" onclick="SalesManager.setPreset('yesterday')">أمس</button>
+                                            <button class="date-preset-btn" onclick="SalesManager.setPreset('week')">هذا الأسبوع</button>
+                                            <button class="date-preset-btn" onclick="SalesManager.setPreset('month')">هذا الشهر</button>
+                                            <button class="date-preset-btn" onclick="SalesManager.setPreset('all')">الكل</button>
+                                        </div>
+                                        <button class="apply-filter-btn" onclick="SalesManager.applyFilter()"><i class="fas fa-filter"></i> تطبيق</button>
+                                        <button class="refresh-sales-btn" onclick="App.refreshSales()"><i class="fas fa-sync-alt"></i></button>
+                                        <button class="refresh-sales-btn" onclick="App.syncOrdersFromServer()"><i class="fas fa-cloud-download-alt"></i> مزامنة</button>
+                                    </div>
+                                </div>
+                                <div id="salesList" class="orders-grid"></div>
+                            </div>
+                        `;
+                        SalesManager.initDates();
+                        SalesManager.applyFilter();
+                    } else if (tab === 'reports') {
+                        content.innerHTML = `
+                            <div class="tab-content active" id="reports">
+                                <div class="reports-header">
+                                    <div class="date-range-picker">
+                                        <div><label>من:</label> <input type="date" id="startDate" class="date-input"></div>
+                                        <div><label>إلى:</label> <input type="date" id="endDate" class="date-input"></div>
+                                        <button class="refresh-sales-btn" onclick="ReportsManager.applyRange()"><i class="fas fa-filter"></i> تطبيق</button>
+                                    </div>
+                                    <div class="preset-buttons">
+                                        <button class="preset-btn active" onclick="ReportsManager.setPreset('today', event)">اليوم</button>
+                                        <button class="preset-btn" onclick="ReportsManager.setPreset('yesterday', event)">أمس</button>
+                                        <button class="preset-btn" onclick="ReportsManager.setPreset('week', event)">هذا الأسبوع</button>
+                                        <button class="preset-btn" onclick="ReportsManager.setPreset('month', event)">هذا الشهر</button>
+                                        <button class="preset-btn" onclick="ReportsManager.setPreset('year', event)">هذه السنة</button>
+                                        <button class="preset-btn" onclick="ReportsManager.setPreset('all', event)">الكل</button>
+                                    </div>
+                                </div>
+                                <div class="stats-cards">
+                                    <div class="stat-card"><div class="stat-icon"><i class="fas fa-coins"></i></div><div class="stat-label">إجمالي المبيعات</div><div class="stat-value" id="totalSales">0 د.أ</div></div>
+                                    <div class="stat-card profit-card"><div class="stat-icon"><i class="fas fa-sack-dollar"></i></div><div class="stat-label">صافي الربح الكلي</div><div class="stat-value" id="totalProfit">0 د.أ</div></div>
+                                    <div class="stat-card"><div class="stat-icon"><i class="fas fa-receipt"></i></div><div class="stat-label">عدد الطلبات</div><div class="stat-value" id="totalOrders">0</div></div>
+                                    <div class="stat-card"><div class="stat-icon"><i class="fas fa-chart-pie"></i></div><div class="stat-label">متوسط نسبة الربح</div><div class="stat-value" id="avgMargin">0%</div></div>
+                                </div>
+                                <div class="chart-container"><canvas id="salesChart"></canvas></div>
+                                <div class="top-products-table">
+                                    <h3><i class="fas fa-crown" style="color: var(--clay-brown);"></i> تحليل الأرباح للمنتجات</h3>
+                                    <table id="topProductsTable"><thead><tr><th>المنتج</th><th>الكمية</th><th>الإيراد</th><th>التكلفة</th><th>صافي الربح</th><th>هامش الربح</th></tr></thead><tbody></tbody></table>
+                                </div>
+                            </div>
+                        `;
+                        ReportsManager.setPreset(ReportsManager.currentPreset);
+                    } else if (tab === 'inventory') {
+                        content.innerHTML = `
+                            <div class="tab-content active" id="inventory">
+                                <div class="inventory-header">
+                                    <h2 style="color: var(--forest-green);"><i class="fas fa-boxes"></i> إدارة المخزون</h2>
+                                    <div class="inventory-actions">
+                                        <button class="action-btn small" onclick="InventoryManager.openCountModal()"><i class="fas fa-pen"></i> تسوية المخزون</button>
+                                        <button class="action-btn small" onclick="InventoryManager.resetOpeningStock()"><i class="fas fa-undo-alt"></i> إعادة تعيين الافتتاحي</button>
+                                        <button class="action-btn small" onclick="InventoryManager.resetFull()"><i class="fas fa-broom"></i> تصفير المخزون</button>
+                                        <button class="action-btn small" onclick="InventoryManager.exportData()"><i class="fas fa-download"></i> تصدير</button>
+                                        <button class="action-btn small" onclick="InventoryManager.importData()"><i class="fas fa-upload"></i> استيراد</button>
+                                    </div>
+                                </div>
+                                <div class="inventory-table-container">
+                                    <table class="inventory-table">
+                                        <thead><tr><th>المنتج</th><th>المباع اليوم</th><th>إجمالي المباع</th><th>المخزون النظري</th><th>المخزون الفعلي</th><th>الفرق</th><th>آخر جرد</th></tr></thead>
+                                        <tbody id="inventoryTableBody"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        `;
+                        InventoryManager.renderTable();
+                    }
+
+                    // تفعيل التبويب
+                    const activeBtn = Array.from(document.querySelectorAll('.tab-btn')).find(btn => btn.innerText.includes(tab === 'categories' ? 'الأصناف' : tab === 'products' ? 'المنتجات' : tab === 'sales' ? 'المبيعات' : tab === 'reports' ? 'الأرباح' : 'المخزون'));
+                    if (activeBtn) activeBtn.classList.add('active');
+                }
+            };
+
+            // ---------- التطبيق الرئيسي ----------
+            window.App = {
+                // دوال عامة
+                attemptLogin: () => {
+                    const u = document.getElementById('username').value;
+                    const p = document.getElementById('password').value;
+                    if (u === CONFIG.CREDENTIALS.user && p === CONFIG.CREDENTIALS.pass) {
+                        document.getElementById('loginScreen').style.display = 'none';
+                        document.getElementById('postLoginWrapper').style.display = 'flex';
+                        document.getElementById('appContainer').classList.add('active');
+                        // تحميل البيانات
+                        API.fetchMenu().then(() => {
+                            InventoryManager.load();
+                            API.loadOrders(false);
+                            UI.switchTab('categories');
+                            // محاولة مزامنة العمليات المؤجلة
+                            Utils.processOfflineQueue();
+                        });
+                    } else {
+                        document.getElementById('errorMsg').style.display = 'block';
+                    }
+                },
+
+                logout: () => {
+                    document.getElementById('appContainer').classList.remove('active');
+                    document.getElementById('postLoginWrapper').style.display = 'none';
+                    document.getElementById('loginScreen').style.display = 'block';
+                },
+
+                refreshAllData: () => {
+                    API.fetchMenu().then(() => {
+                        InventoryManager.mergeWithProducts();
+                        InventoryManager.renderTable();
+                        API.loadOrders(true);
+                    });
+                },
+
+                refreshSales: () => {
+                    API.loadOrders(false);
+                },
+
+                syncOrdersFromServer: () => {
+                    if (confirm('سيتم جلب آخر الطلبات من السيرفر وفقدان أي تعديلات محلية. هل تريد المتابعة؟')) {
+                        API.loadOrders(true);
+                        Utils.showToast('جاري المزامنة...');
+                    }
+                },
+
+                switchTab: (tab) => UI.switchTab(tab),
+
+                // الكائنات الداخلية (للاستخدام من onclick)
+                UI: UI,
+                Inventory: InventoryManager,
+                Menu: MenuManager,
+                Sales: SalesManager,
+                Reports: ReportsManager
+            };
+
+            // تعريض الكائنات للنطاق العام
+            window.MenuManager = MenuManager;
+            window.InventoryManager = InventoryManager;
+            window.SalesManager = SalesManager;
+            window.ReportsManager = ReportsManager;
+
+            // تهيئة الأوراق المتساقطة
+            (function createLeaves() {
+                const leavesContainer = document.getElementById('fallingLeaves');
+                if (!leavesContainer) return;
+                for (let i = 0; i < 30; i++) {
+                    const leaf = document.createElement('div');
+                    leaf.className = 'leaf';
+                    leaf.textContent = ['🌿','🍂','🍃'][Math.floor(Math.random() * 3)];
+                    leaf.style.left = Math.random() * 100 + '%';
+                    leaf.style.animationDuration = (Math.random() * 10 + 12) + 's';
+                    leaf.style.animationDelay = Math.random() * -20 + 's';
+                    leavesContainer.appendChild(leaf);
+                }
+            })();
+        })();
     </script>
 </body>
 </html>
