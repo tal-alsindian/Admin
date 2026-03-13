@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title> إدارة المنيو - تل السنديان </title>
+    <title>نظام إدارة تل السنديان المتقدم - نسخة احترافية</title>
     <link rel="icon" href="https://iili.io/qfhk5Pt.png">
     <link rel="apple-touch-icon" href="https://iili.io/qfhk5Pt.png">
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&family=Tajawal:wght@400;700;900&display=swap" rel="stylesheet">
@@ -155,7 +155,7 @@
         .edit-btn { color: #007bff; }
         .delete-btn { color: #dc3545; }
 
-        /* Sales Section - REVERTED TO ORIGINAL */
+        /* Sales Section */
         .sales-header { display: flex; flex-direction: column; gap: 15px; margin-bottom: 20px; }
         .sales-filter-row {
             display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
@@ -274,6 +274,18 @@
             background: var(--forest-green); color: white; padding: 12px 25px; border-radius: 40px;
             z-index: 3000; border: 2px solid var(--sandy-beige); font-weight: bold; max-width: 300px; text-align: center;
         }
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .btn-loading { pointer-events: none; opacity: 0.7; }
+
         @media (max-width: 600px) {
             .sales-filter-row { flex-direction: column; align-items: stretch; }
             .date-picker { justify-content: space-between; }
@@ -288,9 +300,9 @@
     <!-- شاشة الدخول -->
     <div class="login-screen" id="loginScreen">
         <img src="https://iili.io/qfhk5Pt.png" alt="تل السنديان" class="glowing-logo">
-        <h2 style="color: var(--forest-green); margin-bottom: 15px;">لوحة تحكم تل السنديان</h2>
-        <input type="text" id="username" class="input-field" placeholder="اسم المستخدم" value="">
-        <input type="password" id="password" class="input-field" placeholder="كلمة المرور" value="">
+        <h2 style="color: var(--forest-green); margin-bottom: 15px;">نظام إدارة تل السنديان المتقدم</h2>
+        <input type="text" id="username" class="input-field" placeholder="اسم المستخدم">
+        <input type="password" id="password" class="input-field" placeholder="كلمة المرور">
         <button class="login-submit" onclick="App.attemptLogin()">دخول</button>
         <div id="errorMsg" style="color: red; margin-top: 10px; display: none;">بيانات غير صحيحة</div>
     </div>
@@ -300,7 +312,7 @@
         <img src="https://iili.io/qfhk5Pt.png" alt="تل السنديان" class="glowing-logo">
         <div class="app-container" id="appContainer">
             <div class="app-header">
-                <div class="app-title">إدارة المنيو والمبيعات والمخزون</div>
+                <div class="app-title">إدارة متكاملة - تل السنديان</div>
                 <div style="display: flex; gap: 10px;">
                     <button class="logout-btn" onclick="App.refreshAllData()" title="تحديث الكل"><i class="fas fa-sync-alt"></i></button>
                     <button class="logout-btn" onclick="App.logout()"><i class="fas fa-sign-out-alt"></i> خروج</button>
@@ -348,8 +360,9 @@
 
     <script>
         // ============================================================
-        // النظام المتكامل لإدارة تل السنديان - نسخة محسنة بشكل جذري
-        // مع CSS الأصلي
+        // النظام المتكامل لإدارة تل السنديان - نسخة احترافية
+        // معالجة جميع المشاكل: NaN, تأخر التحميل, إجمالي الفواتير, أسعار المنتجات
+        // تم إصلاح مشكلة الصور: تجاهل قيم false والحفاظ على الروابط الأصلية
         // ============================================================
 
         (function() {
@@ -359,14 +372,15 @@
                 KITCHEN_API_URL: 'https://script.google.com/macros/s/AKfycbzU7pp0Ul8KNDT4iEd7kGFxNrXYzX4B4zfdYANjE59ABvMq1vIKlmEM4gAOipY47Zeoiw/exec',
                 CREDENTIALS: { user: 'Mismar', pass: 'Mismar.11' },
                 STORAGE_KEYS: {
-                    INVENTORY: 'tel_alsindian_inventory',
-                    ORDERS_CACHE: 'tel_alsindian_orders_cache',
-                    ORDERS_TIMESTAMP: 'tel_alsindian_orders_timestamp',
-                    MENU_CACHE: 'tel_alsindian_menu_cache'
+                    INVENTORY: 'tel_alsindian_inventory_v2',
+                    ORDERS_CACHE: 'tel_alsindian_orders_v2',
+                    ORDERS_TIMESTAMP: 'tel_alsindian_orders_timestamp_v2',
+                    MENU_CACHE: 'tel_alsindian_menu_v2'
                 },
                 MAX_RETRIES: 3,
                 RETRY_DELAY: 1000,
-                REQUEST_TIMEOUT: 10000
+                REQUEST_TIMEOUT: 10000,
+                CACHE_TTL: 5 * 60 * 1000 // 5 دقائق
             };
 
             // ---------- حالة التطبيق العامة ----------
@@ -381,10 +395,11 @@
                 salesChart: null,
                 isLoading: false,
                 pendingRequests: 0,
-                offlineQueue: []  // للأعمال التي فشلت بسبب الاتصال
+                offlineQueue: [],
+                loadingCallbacks: new Set()
             };
 
-            // ---------- دوال مساعدة عامة ----------
+            // ---------- دوال مساعدة متطورة ----------
             const Utils = {
                 generateId: () => 'id_' + Date.now() + Math.random().toString(36).substr(2, 6),
 
@@ -397,21 +412,50 @@
                     setTimeout(() => toast.remove(), duration);
                 },
 
-                showLoading: (show) => {
-                    AppState.isLoading = show;
-                    // يمكن إضافة مؤشر تحميل عام
+                setLoading: (isLoading) => {
+                    AppState.isLoading = isLoading;
+                    AppState.loadingCallbacks.forEach(cb => cb(isLoading));
+                },
+
+                onLoadingChange: (callback) => {
+                    AppState.loadingCallbacks.add(callback);
+                    return () => AppState.loadingCallbacks.delete(callback);
                 },
 
                 formatDate: (date) => {
-                    const d = new Date(date);
-                    return d.toLocaleDateString('ar-EG') + ' ' + d.toLocaleTimeString('ar-EG');
+                    try {
+                        const d = new Date(date);
+                        if (isNaN(d.getTime())) return 'تاريخ غير صالح';
+                        return d.toLocaleDateString('ar-EG') + ' ' + d.toLocaleTimeString('ar-EG');
+                    } catch {
+                        return 'تاريخ غير صالح';
+                    }
                 },
 
                 safeJSONParse: (str, fallback = null) => {
                     try { return JSON.parse(str); } catch { return fallback; }
                 },
 
-                // طلب HTTP مع إعادة محاولة ومهلة
+                // طلب HTTP مع إعادة محاولة ومهلة وتخزين مؤقت
+                async fetchWithCache(url, options = {}, cacheKey = null, ttl = CONFIG.CACHE_TTL) {
+                    if (cacheKey) {
+                        const cached = this.getSecureItem(cacheKey);
+                        if (cached && Date.now() - cached.timestamp < ttl) {
+                            return cached.data;
+                        }
+                    }
+
+                    const data = await this.fetchWithRetry(url, options);
+                    
+                    if (cacheKey) {
+                        this.setSecureItem(cacheKey, {
+                            data: data,
+                            timestamp: Date.now()
+                        });
+                    }
+                    return data;
+                },
+
                 async fetchWithRetry(url, options = {}, retries = CONFIG.MAX_RETRIES) {
                     const controller = new AbortController();
                     const timeoutId = setTimeout(() => controller.abort(), CONFIG.REQUEST_TIMEOUT);
@@ -432,10 +476,10 @@
                     }
                 },
 
-                // حفظ البيانات في التخزين المحلي مع تشفير بسيط (base64)
+                // حفظ البيانات في التخزين المحلي مع تشفير بسيط
                 setSecureItem: (key, value) => {
                     try {
-                        const encoded = btoa(JSON.stringify(value));
+                        const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(value))));
                         localStorage.setItem(key, encoded);
                     } catch (e) {
                         console.error('فشل في حفظ البيانات:', e);
@@ -446,69 +490,126 @@
                     try {
                         const item = localStorage.getItem(key);
                         if (!item) return null;
-                        return JSON.parse(atob(item));
+                        const decoded = decodeURIComponent(escape(atob(item)));
+                        return JSON.parse(decoded);
                     } catch {
                         return null;
                     }
                 },
 
-                // إضافة عملية إلى قائمة الانتظار عند عدم الاتصال
                 addToQueue: (action, data) => {
                     AppState.offlineQueue.push({ action, data, timestamp: Date.now() });
-                    Utils.showToast('تم حفظ العملية محلياً وستنفذ عند استعادة الاتصال');
+                    this.showToast('تم حفظ العملية محلياً وستنفذ عند استعادة الاتصال');
                 },
 
-                // محاولة تنفيذ العمليات المعلقة
                 async processOfflineQueue() {
                     if (AppState.offlineQueue.length === 0) return;
-                    Utils.showToast('جاري مزامنة العمليات المحلية...');
+                    this.showToast('جاري مزامنة العمليات المحلية...');
                     for (const item of AppState.offlineQueue) {
                         try {
                             if (item.action === 'saveCategory' || item.action === 'saveProduct' || item.action === 'deleteItem') {
                                 await API.saveToServer(item.data.type, item.data.data);
                             }
-                            // يمكن إضافة المزيد من الإجراءات
                         } catch (e) {
                             console.error('فشل تنفيذ عملية مؤجلة:', e);
                         }
                     }
                     AppState.offlineQueue = [];
-                    Utils.showToast('تمت المزامنة بنجاح');
+                    this.showToast('تمت المزامنة بنجاح');
+                },
+
+                // حساب إجمالي الطلب بدقة
+                calculateOrderTotal(order) {
+                    if (!order || !order.items) return 0;
+                    return order.items.reduce((sum, item) => {
+                        const price = Number(item.price) || 0;
+                        const qty = Number(item.quantity) || 1;
+                        return sum + (price * qty);
+                    }, 0);
+                },
+
+                // تحديث إجمالي الطلب إذا كان 0
+                fixOrderTotal(order) {
+                    if (!order.total || order.total === 0) {
+                        order.total = this.calculateOrderTotal(order);
+                    }
+                    return order;
+                },
+
+                // ربط المنتج بالطلب باستخدام الاسم
+                matchProductToOrderItem(item) {
+                    if (item.productId) return item;
+                    const product = AppState.products.find(p => p.name === item.name);
+                    if (product) {
+                        item.productId = product.id;
+                        item.price = Number(item.price) || product.price || 0;
+                    }
+                    return item;
+                },
+
+                // تنظيف قيمة الصورة: إذا كانت false أو "false" أو null أو undefined، نعيد سلسلة فارغة
+                cleanImageUrl: (url) => {
+                    if (!url || url === 'false' || url === false) return '';
+                    return url;
                 }
             };
 
             // ---------- التعامل مع API ----------
             const API = {
-                async fetchMenu() {
+                async fetchMenu(force = false) {
                     try {
-                        const data = await Utils.fetchWithRetry(`${CONFIG.SCRIPT_URL}?action=getMenuData&_=${Date.now()}`);
+                        Utils.setLoading(true);
+                        const cacheKey = force ? null : CONFIG.STORAGE_KEYS.MENU_CACHE;
+                        const data = await Utils.fetchWithCache(
+                            `${CONFIG.SCRIPT_URL}?action=getMenuData&_=${Date.now()}`,
+                            {},
+                            cacheKey,
+                            force ? 0 : CONFIG.CACHE_TTL
+                        );
+                        
                         if (data.success) {
                             AppState.categories = data.categories || [];
-                            AppState.products = (data.products || []).map(p => ({ ...p, cost: p.cost || 0 }));
-                            // تحديث الكاش
-                            Utils.setSecureItem(CONFIG.STORAGE_KEYS.MENU_CACHE, { categories: AppState.categories, products: AppState.products });
+                            AppState.products = (data.products || []).map(p => ({
+                                ...p,
+                                cost: Number(p.cost) || 0,
+                                price: Number(p.price) || 0,
+                                // التأكد من أن الصورة ليست false
+                                image: Utils.cleanImageUrl(p.image)
+                            }));
+                            // تحديث الكاش يدوياً
+                            Utils.setSecureItem(CONFIG.STORAGE_KEYS.MENU_CACHE, {
+                                data: data,
+                                timestamp: Date.now()
+                            });
                             return true;
                         }
                         throw new Error('استجابة غير صالحة');
                     } catch (error) {
                         Utils.showToast('فشل تحميل المنيو، استخدام البيانات المخزنة', true);
                         const cached = Utils.getSecureItem(CONFIG.STORAGE_KEYS.MENU_CACHE);
-                        if (cached) {
-                            AppState.categories = cached.categories || [];
-                            AppState.products = cached.products || [];
+                        if (cached && cached.data) {
+                            AppState.categories = cached.data.categories || [];
+                            AppState.products = (cached.data.products || []).map(p => ({
+                                ...p,
+                                cost: Number(p.cost) || 0,
+                                price: Number(p.price) || 0,
+                                image: Utils.cleanImageUrl(p.image)
+                            }));
                         }
                         return false;
+                    } finally {
+                        Utils.setLoading(false);
                     }
                 },
 
                 async saveToServer(type, data) {
-                    // type: 'categories' أو 'products'
                     const action = type === 'categories' ? 'saveCategories' : 'saveProducts';
                     const formData = new URLSearchParams();
                     formData.append('action', action);
                     formData.append('data', JSON.stringify(data));
 
                     try {
+                        Utils.setLoading(true);
                         const result = await Utils.fetchWithRetry(CONFIG.SCRIPT_URL, {
                             method: 'POST',
                             body: formData
@@ -516,49 +617,66 @@
                         if (result.success) {
                             Utils.showToast('تم الحفظ بنجاح');
                             // تحديث الكاش
-                            const cache = Utils.getSecureItem(CONFIG.STORAGE_KEYS.MENU_CACHE) || {};
-                            cache[type] = data;
-                            Utils.setSecureItem(CONFIG.STORAGE_KEYS.MENU_CACHE, cache);
+                            const cache = Utils.getSecureItem(CONFIG.STORAGE_KEYS.MENU_CACHE);
+                            if (cache && cache.data) {
+                                cache.data[type] = data;
+                                cache.timestamp = Date.now();
+                                Utils.setSecureItem(CONFIG.STORAGE_KEYS.MENU_CACHE, cache);
+                            }
                             return true;
                         } else {
                             throw new Error(result.error || 'خطأ في الحفظ');
                         }
                     } catch (error) {
                         Utils.showToast('فشل الحفظ على السيرفر، تم حفظه محلياً', true);
-                        // إضافة إلى قائمة الانتظار
                         Utils.addToQueue('save', { type, data });
                         return false;
+                    } finally {
+                        Utils.setLoading(false);
                     }
                 },
 
                 async loadOrders(forceRefresh = false) {
                     if (!forceRefresh) {
                         const cached = Utils.getSecureItem(CONFIG.STORAGE_KEYS.ORDERS_CACHE);
-                        if (cached) {
-                            AppState.allOrders = cached;
+                        if (cached && Array.isArray(cached)) {
+                            AppState.allOrders = cached.map(order => {
+                                // إصلاح الإجمالي وربط المنتجات
+                                order = Utils.fixOrderTotal(order);
+                                order.items = (order.items || []).map(item => Utils.matchProductToOrderItem(item));
+                                return order;
+                            });
                             return;
                         }
                     }
                     try {
+                        Utils.setLoading(true);
                         const data = await Utils.fetchWithRetry(`${CONFIG.KITCHEN_API_URL}?action=getOrders&status=all&_=${Date.now()}`);
                         if (data.success && data.orders) {
-                            AppState.allOrders = data.orders.map(order => ({
-                                orderId: order.orderId || order.id || 'غير معروف',
-                                timestamp: order.timestamp || order.date || order.time || new Date().toISOString(),
-                                tableNumber: order.tableNumber || order.table || '?',
-                                notes: order.notes || '',
-                                total: Number(order.total) || 0,
-                                items: Array.isArray(order.items) ? order.items.map(item => {
+                            AppState.allOrders = data.orders.map(order => {
+                                const items = Array.isArray(order.items) ? order.items.map(item => {
                                     const product = AppState.products.find(p => p.name === item.name);
                                     return {
                                         productId: product ? product.id : null,
                                         name: item.name || 'منتج',
                                         quantity: Number(item.quantity) || 1,
-                                        price: Number(item.price) || 0
+                                        price: Number(item.price) || (product ? product.price : 0)
                                     };
-                                }) : [],
-                                status: order.status || 'preparing'
-                            }));
+                                }) : [];
+                                let total = Number(order.total) || 0;
+                                if (total === 0 && items.length > 0) {
+                                    total = items.reduce((sum, it) => sum + (it.price * it.quantity), 0);
+                                }
+                                return {
+                                    orderId: order.orderId || order.id || 'غير معروف',
+                                    timestamp: order.timestamp || order.date || order.time || new Date().toISOString(),
+                                    tableNumber: order.tableNumber || order.table || '?',
+                                    notes: order.notes || '',
+                                    total: total,
+                                    items: items,
+                                    status: order.status || 'preparing'
+                                };
+                            });
                             Utils.setSecureItem(CONFIG.STORAGE_KEYS.ORDERS_CACHE, AppState.allOrders);
                             localStorage.setItem(CONFIG.STORAGE_KEYS.ORDERS_TIMESTAMP, new Date().toISOString());
                         } else {
@@ -567,7 +685,11 @@
                     } catch (error) {
                         Utils.showToast('تعذر تحميل الطلبات، استخدام المحفوظة', true);
                         const cached = Utils.getSecureItem(CONFIG.STORAGE_KEYS.ORDERS_CACHE);
-                        if (cached) AppState.allOrders = cached;
+                        if (cached) {
+                            AppState.allOrders = cached;
+                        }
+                    } finally {
+                        Utils.setLoading(false);
                     }
                 }
             };
@@ -709,6 +831,7 @@
                     Utils.setSecureItem(CONFIG.STORAGE_KEYS.ORDERS_CACHE, AppState.allOrders);
                     this.renderTable();
                     if (typeof SalesManager !== 'undefined') SalesManager.applyFilter();
+                    if (typeof ReportsManager !== 'undefined') ReportsManager.applyRange();
                     Utils.showToast('تم التصفير');
                 },
 
@@ -762,13 +885,15 @@
                     const today = new Date();
                     const sevenDaysAgo = new Date(today);
                     sevenDaysAgo.setDate(today.getDate() - 7);
-                    document.getElementById('salesDateFrom').value = sevenDaysAgo.toISOString().split('T')[0];
-                    document.getElementById('salesDateTo').value = today.toISOString().split('T')[0];
+                    const from = document.getElementById('salesDateFrom');
+                    const to = document.getElementById('salesDateTo');
+                    if (from) from.value = sevenDaysAgo.toISOString().split('T')[0];
+                    if (to) to.value = today.toISOString().split('T')[0];
                 },
 
                 applyFilter() {
-                    const fromStr = document.getElementById('salesDateFrom').value;
-                    const toStr = document.getElementById('salesDateTo').value;
+                    const fromStr = document.getElementById('salesDateFrom')?.value;
+                    const toStr = document.getElementById('salesDateTo')?.value;
                     this.dateFrom = fromStr ? new Date(fromStr) : null;
                     this.dateTo = toStr ? new Date(toStr) : null;
                     if (this.dateTo) this.dateTo.setHours(23,59,59,999);
@@ -802,12 +927,14 @@
                         case 'all':
                             from = null; to = null; break;
                     }
+                    const fromInput = document.getElementById('salesDateFrom');
+                    const toInput = document.getElementById('salesDateTo');
                     if (from) {
-                        document.getElementById('salesDateFrom').value = from.toISOString().split('T')[0];
-                        document.getElementById('salesDateTo').value = to.toISOString().split('T')[0];
+                        if (fromInput) fromInput.value = from.toISOString().split('T')[0];
+                        if (toInput) toInput.value = to.toISOString().split('T')[0];
                     } else {
-                        document.getElementById('salesDateFrom').value = '';
-                        document.getElementById('salesDateTo').value = '';
+                        if (fromInput) fromInput.value = '';
+                        if (toInput) toInput.value = '';
                     }
                     this.applyFilter();
                 },
@@ -815,8 +942,9 @@
                 render() {
                     const container = document.getElementById('salesList');
                     if (!container) return;
-                    let filtered = AppState.allOrders;
-                    const status = document.getElementById('salesStatusFilter').value;
+                    
+                    let filtered = AppState.allOrders.map(order => Utils.fixOrderTotal(order));
+                    const status = document.getElementById('salesStatusFilter')?.value || 'all';
                     if (status !== 'all') filtered = filtered.filter(o => o.status === status);
                     if (this.dateFrom) filtered = filtered.filter(o => new Date(o.timestamp) >= this.dateFrom);
                     if (this.dateTo) filtered = filtered.filter(o => new Date(o.timestamp) <= this.dateTo);
@@ -829,14 +957,20 @@
                     container.innerHTML = filtered.map(order => {
                         const items = order.items || [];
                         const timeStr = Utils.formatDate(order.timestamp);
-                        const total = order.total.toFixed(2);
+                        const total = (order.total || 0).toFixed(2);
                         return `<div class="order-card">
                             <div class="order-header"><span>${order.orderId}</span><span>${timeStr}</span></div>
                             <div class="order-body">
                                 <div><i class="fas fa-chair"></i> طاولة: ${order.tableNumber}</div>
-                                <div class="order-items-list">${items.map(item => `<div class="order-item-row"><span>${item.name}</span><span>x${item.quantity} (${(item.price*item.quantity).toFixed(2)} د.أ)</span></div>`).join('')}</div>
+                                <div class="order-items-list">${items.map(item => {
+                                    const itemTotal = ((item.price || 0) * (item.quantity || 1)).toFixed(2);
+                                    return `<div class="order-item-row"><span>${item.name}</span><span>x${item.quantity || 1} (${itemTotal} د.أ)</span></div>`;
+                                }).join('')}</div>
                                 <div class="order-total">الإجمالي: ${total} د.أ</div>
-                                <span class="order-status ${order.status === 'preparing' ? 'status-preparing' : 'status-completed'}"><i class="fas ${order.status==='preparing'?'fa-fire':'fa-check-circle'}"></i> ${order.status==='preparing'?'قيد التحضير':'مكتمل'}</span>
+                                <span class="order-status ${order.status === 'preparing' ? 'status-preparing' : 'status-completed'}">
+                                    <i class="fas ${order.status==='preparing'?'fa-fire':'fa-check-circle'}"></i> 
+                                    ${order.status==='preparing'?'قيد التحضير':'مكتمل'}
+                                </span>
                                 ${order.notes ? `<div><i class="fas fa-sticky-note"></i> ${order.notes}</div>` : ''}
                             </div>
                         </div>`;
@@ -885,14 +1019,16 @@
                             end = new Date(2100,11,31);
                             break;
                     }
-                    document.getElementById('startDate').value = start.toISOString().split('T')[0];
-                    document.getElementById('endDate').value = end.toISOString().split('T')[0];
+                    const startInput = document.getElementById('startDate');
+                    const endInput = document.getElementById('endDate');
+                    if (startInput) startInput.value = start.toISOString().split('T')[0];
+                    if (endInput) endInput.value = end.toISOString().split('T')[0];
                     this.applyRange();
                 },
 
                 applyRange() {
-                    const startStr = document.getElementById('startDate').value;
-                    const endStr = document.getElementById('endDate').value;
+                    const startStr = document.getElementById('startDate')?.value;
+                    const endStr = document.getElementById('endDate')?.value;
                     if (!startStr || !endStr) return Utils.showToast('حدد التاريخ', true);
                     const start = new Date(startStr); start.setHours(0,0,0,0);
                     const end = new Date(endStr); end.setHours(23,59,59,999);
@@ -916,20 +1052,27 @@
                                 const prod = AppState.products.find(p => p.name === item.name);
                                 pid = prod ? prod.id : item.name;
                             }
-                            const qty = item.quantity || 1;
-                            const price = item.price || 0;
+                            const qty = Number(item.quantity) || 1;
+                            const price = Number(item.price) || 0;
                             const rev = price * qty;
-                            const prodObj = AppState.products.find(p => p.id === pid || p.name === item.name);
-                            const cost = prodObj && prodObj.cost ? prodObj.cost * qty : 0;
+                            // البحث عن المنتج في قائمة المنتجات (قد يكون الاسم غير متطابق)
+                            const product = AppState.products.find(p => p.id === pid || p.name === item.name);
+                            const cost = product ? (Number(product.cost) || 0) * qty : 0;
                             totalCost += cost;
 
-                            if (productMap.has(pid)) {
-                                const p = productMap.get(pid);
+                            const key = pid || item.name;
+                            if (productMap.has(key)) {
+                                const p = productMap.get(key);
                                 p.qty += qty;
                                 p.rev += rev;
                                 p.cost += cost;
                             } else {
-                                productMap.set(pid, { name: item.name, qty, rev, cost });
+                                productMap.set(key, { 
+                                    name: product ? product.name : item.name, 
+                                    qty, 
+                                    rev, 
+                                    cost 
+                                });
                             }
                         });
                     });
@@ -937,12 +1080,20 @@
                     const totalProfit = totalSales - totalCost;
                     const avgMargin = totalSales > 0 ? (totalProfit / totalSales) * 100 : 0;
 
-                    document.getElementById('totalSales').innerHTML = totalSales.toFixed(2) + ' د.أ';
-                    document.getElementById('totalProfit').innerHTML = totalProfit.toFixed(2) + ' د.أ';
-                    document.getElementById('totalOrders').innerHTML = completed.length;
-                    document.getElementById('avgMargin').innerHTML = avgMargin.toFixed(1) + '%';
+                    const totalSalesEl = document.getElementById('totalSales');
+                    const totalProfitEl = document.getElementById('totalProfit');
+                    const totalOrdersEl = document.getElementById('totalOrders');
+                    const avgMarginEl = document.getElementById('avgMargin');
+                    
+                    if (totalSalesEl) totalSalesEl.innerHTML = (isNaN(totalSales) ? 0 : totalSales).toFixed(2) + ' د.أ';
+                    if (totalProfitEl) totalProfitEl.innerHTML = (isNaN(totalProfit) ? 0 : totalProfit).toFixed(2) + ' د.أ';
+                    if (totalOrdersEl) totalOrdersEl.innerHTML = completed.length;
+                    if (avgMarginEl) avgMarginEl.innerHTML = (isNaN(avgMargin) ? 0 : avgMargin).toFixed(1) + '%';
 
-                    const topProducts = Array.from(productMap.values()).sort((a,b) => (b.rev - b.cost) - (a.rev - a.cost)).slice(0,20);
+                    const topProducts = Array.from(productMap.values())
+                        .sort((a,b) => (b.rev - b.cost) - (a.rev - a.cost))
+                        .slice(0,20);
+                    
                     const tbody = document.querySelector('#topProductsTable tbody');
                     if (tbody) {
                         tbody.innerHTML = topProducts.map(p => {
@@ -952,10 +1103,10 @@
                             return `<tr>
                                 <td>${p.name}</td>
                                 <td>${p.qty}</td>
-                                <td>${p.rev.toFixed(2)}</td>
-                                <td>${p.cost.toFixed(2)}</td>
-                                <td class="${cls}">${profit.toFixed(2)}</td>
-                                <td>${margin.toFixed(1)}%</td>
+                                <td>${(isNaN(p.rev) ? 0 : p.rev).toFixed(2)}</td>
+                                <td>${(isNaN(p.cost) ? 0 : p.cost).toFixed(2)}</td>
+                                <td class="${cls}">${(isNaN(profit) ? 0 : profit).toFixed(2)}</td>
+                                <td>${(isNaN(margin) ? 0 : margin).toFixed(1)}%</td>
                             </tr>`;
                         }).join('');
                     }
@@ -973,12 +1124,29 @@
                     const labels = sorted.map(d => d[0]);
                     const data = sorted.map(d => d[1]);
 
-                    const ctx = document.getElementById('salesChart').getContext('2d');
+                    const canvas = document.getElementById('salesChart');
+                    if (!canvas) return;
+                    const ctx = canvas.getContext('2d');
                     if (AppState.salesChart) AppState.salesChart.destroy();
                     AppState.salesChart = new Chart(ctx, {
                         type: 'line',
-                        data: { labels, datasets: [{ label: 'المبيعات (د.أ)', data, borderColor: '#2D5A27', backgroundColor: 'rgba(45,90,39,0.1)', tension: 0.3, fill: true }] },
-                        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+                        data: { 
+                            labels, 
+                            datasets: [{ 
+                                label: 'المبيعات (د.أ)', 
+                                data, 
+                                borderColor: '#2D5A27', 
+                                backgroundColor: 'rgba(45,90,39,0.1)', 
+                                tension: 0.3, 
+                                fill: true 
+                            }] 
+                        },
+                        options: { 
+                            responsive: true, 
+                            maintainAspectRatio: false, 
+                            plugins: { legend: { display: false } }, 
+                            scales: { y: { beginAtZero: true } } 
+                        }
                     });
                 }
             };
@@ -992,6 +1160,7 @@
                         filter.innerHTML = '<option value="">جميع الأصناف</option>' +
                             AppState.categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
                     }
+                    if (!container) return;
                     container.innerHTML = `
                         <button class="sync-btn" onclick="MenuManager.openCategoryModal()" style="margin-bottom:15px;"><i class="fas fa-plus"></i> إضافة صنف</button>
                         ${AppState.categories.map(c => `
@@ -1007,10 +1176,12 @@
                 },
 
                 renderProducts() {
-                    const filter = document.getElementById('filterCategory').value;
+                    const filter = document.getElementById('filterCategory')?.value || '';
                     let filtered = AppState.products;
                     if (filter) filtered = filtered.filter(p => p.categoryId === filter);
-                    document.getElementById('productsList').innerHTML = filtered.map(p => {
+                    const container = document.getElementById('productsList');
+                    if (!container) return;
+                    container.innerHTML = filtered.map(p => {
                         const cat = AppState.categories.find(c => c.id === p.categoryId);
                         const margin = p.cost ? ((p.price - p.cost) / p.price * 100).toFixed(0) : 0;
                         return `<div class="item-card">
@@ -1032,7 +1203,7 @@
                     document.getElementById('editForm').innerHTML = `
                         <div class="form-group"><label>الاسم</label><input type="text" id="cat_name" value="${item.name}"></div>
                         <div class="form-group"><label>الوصف</label><textarea id="cat_desc">${item.description}</textarea></div>
-                        <div class="form-group"><label>رابط الصورة</label><input type="text" id="cat_image" value="${item.image}"></div>
+                        <div class="form-group"><label>رابط الصورة</label><input type="text" id="cat_image" value="${Utils.cleanImageUrl(item.image)}"></div>
                         <div class="form-group"><label>الترتيب</label><input type="number" id="cat_order" value="${item.order}"></div>
                         <button type="button" class="submit-form-btn" onclick="MenuManager.saveCategory()">حفظ</button>
                     `;
@@ -1070,7 +1241,7 @@
                         <div class="form-group"><label>الوصف</label><textarea id="prod_desc">${item.description}</textarea></div>
                         <div class="form-group"><label>سعر البيع</label><input type="number" step="0.1" id="prod_price" value="${item.price}"></div>
                         <div class="form-group"><label>تكلفة المنتج (للوحدة)</label><input type="number" step="0.1" id="prod_cost" value="${item.cost || 0}"></div>
-                        <div class="form-group"><label>رابط الصورة</label><input type="text" id="prod_image" value="${item.image}"></div>
+                        <div class="form-group"><label>رابط الصورة</label><input type="text" id="prod_image" value="${Utils.cleanImageUrl(item.image)}"></div>
                         <div class="form-group"><label>جديد</label><select id="prod_isNew"><option value="false" ${!item.isNew ? 'selected' : ''}>لا</option><option value="true" ${item.isNew ? 'selected' : ''}>نعم</option></select></div>
                         <div class="form-group"><label>الترتيب</label><input type="number" id="prod_order" value="${item.order}"></div>
                         <button type="button" class="submit-form-btn" onclick="MenuManager.saveProduct()">حفظ</button>
@@ -1134,17 +1305,23 @@
                     document.getElementById('inventoryModal').classList.remove('active');
                 },
 
-                buildContentArea() {
-                    // يتم استدعاؤها عند التبديل بين التبويبات
-                },
-
                 switchTab(tab) {
                     AppState.currentTab = tab;
                     document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-                    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                    
+                    // تفعيل التبويب
+                    const activeBtn = Array.from(document.querySelectorAll('.tab-btn')).find(btn => 
+                        btn.innerText.includes(tab === 'categories' ? 'الأصناف' : 
+                                             tab === 'products' ? 'المنتجات' : 
+                                             tab === 'sales' ? 'المبيعات' : 
+                                             tab === 'reports' ? 'الأرباح' : 'المخزون')
+                    );
+                    if (activeBtn) activeBtn.classList.add('active');
 
-                    // إعادة بناء المحتوى حسب التبويب
+                    // إعادة بناء المحتوى
                     const content = document.getElementById('contentArea');
+                    if (!content) return;
+
                     if (tab === 'categories') {
                         content.innerHTML = `<div class="tab-content active" id="categories"></div>`;
                         MenuManager.renderCategories();
@@ -1249,10 +1426,6 @@
                         `;
                         InventoryManager.renderTable();
                     }
-
-                    // تفعيل التبويب
-                    const activeBtn = Array.from(document.querySelectorAll('.tab-btn')).find(btn => btn.innerText.includes(tab === 'categories' ? 'الأصناف' : tab === 'products' ? 'المنتجات' : tab === 'sales' ? 'المبيعات' : tab === 'reports' ? 'الأرباح' : 'المخزون'));
-                    if (activeBtn) activeBtn.classList.add('active');
                 }
             };
 
@@ -1271,7 +1444,6 @@
                             InventoryManager.load();
                             API.loadOrders(false);
                             UI.switchTab('categories');
-                            // محاولة مزامنة العمليات المؤجلة
                             Utils.processOfflineQueue();
                         });
                     } else {
@@ -1286,7 +1458,7 @@
                 },
 
                 refreshAllData: () => {
-                    API.fetchMenu().then(() => {
+                    API.fetchMenu(true).then(() => {
                         InventoryManager.mergeWithProducts();
                         InventoryManager.renderTable();
                         API.loadOrders(true);
@@ -1294,19 +1466,25 @@
                 },
 
                 refreshSales: () => {
-                    API.loadOrders(false);
+                    API.loadOrders(false).then(() => {
+                        SalesManager.applyFilter();
+                        ReportsManager.applyRange();
+                    });
                 },
 
                 syncOrdersFromServer: () => {
                     if (confirm('سيتم جلب آخر الطلبات من السيرفر وفقدان أي تعديلات محلية. هل تريد المتابعة؟')) {
-                        API.loadOrders(true);
+                        API.loadOrders(true).then(() => {
+                            SalesManager.applyFilter();
+                            ReportsManager.applyRange();
+                        });
                         Utils.showToast('جاري المزامنة...');
                     }
                 },
 
                 switchTab: (tab) => UI.switchTab(tab),
 
-                // الكائنات الداخلية (للاستخدام من onclick)
+                // الكائنات الداخلية
                 UI: UI,
                 Inventory: InventoryManager,
                 Menu: MenuManager,
