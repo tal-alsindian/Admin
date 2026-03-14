@@ -251,6 +251,41 @@
         .qty-input { width: 80px; padding: 5px; border: 2px solid var(--sandy-beige); border-radius: 20px; text-align: center; }
         .diff-positive { color: var(--forest-green); font-weight: 900; }
         .diff-negative { color: #b33; font-weight: 900; }
+
+        /* Staff Sessions Section */
+        .staff-header {
+            margin-bottom: 20px;
+        }
+        .staff-filter-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-items: center;
+            background: rgba(255,255,255,0.7);
+            padding: 15px;
+            border-radius: 40px;
+            border: 2px solid var(--clay-brown);
+            margin-bottom: 15px;
+        }
+        .staff-table-container {
+            background: white;
+            border-radius: 30px;
+            padding: 20px;
+            border: 2px solid var(--clay-brown);
+            overflow-x: auto;
+        }
+        .staff-table {
+            width: 100%;
+            min-width: 800px;
+        }
+        .duration-badge {
+            background: var(--forest-green);
+            color: white;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.85em;
+        }
+
         .empty-state { text-align: center; padding: 40px 20px; background: white; border-radius: 20px; border: 2px solid var(--clay-brown); }
         .modal-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -325,6 +360,8 @@
                 <button class="tab-btn" onclick="App.switchTab('sales')"><i class="fas fa-chart-line"></i> المبيعات</button>
                 <button class="tab-btn" onclick="App.switchTab('reports')"><i class="fas fa-file-invoice-dollar"></i> الأرباح والتقارير</button>
                 <button class="tab-btn" onclick="App.switchTab('inventory')"><i class="fas fa-boxes"></i> المخزون</button>
+                <!-- تبويب سجل الموظفين الجديد -->
+                <button class="tab-btn" onclick="App.switchTab('staff')"><i class="fas fa-users"></i> سجل الموظفين</button>
             </div>
 
             <div class="content-area" id="contentArea">
@@ -361,8 +398,7 @@
     <script>
         // ============================================================
         // النظام المتكامل لإدارة تل السنديان - نسخة احترافية
-        // معالجة جميع المشاكل: NaN, تأخر التحميل, إجمالي الفواتير, أسعار المنتجات
-        // تم إصلاح مشكلة الصور: تجاهل قيم false والحفاظ على الروابط الأصلية
+        // مع إضافة تبويب سجل الموظفين (Staff Sessions) وزر حذف السجل
         // ============================================================
 
         (function() {
@@ -396,10 +432,90 @@
                 isLoading: false,
                 pendingRequests: 0,
                 offlineQueue: [],
-                loadingCallbacks: new Set()
+                loadingCallbacks: new Set(),
+                // بيانات جلسات الموظفين
+                staffSessions: []
             };
 
-            // ---------- دوال مساعدة متطورة ----------
+            // ---------- IndexedDB (مطابق لما في barista.html مع إضافة دوال الجلسات) ----------
+            const DB = {
+                name: 'TelAlSindianDB',
+                version: 2,
+                stores: {
+                    barista_orders: 'barista_orders',
+                    barista_sessions: 'barista_sessions'
+                },
+                db: null,
+
+                async init() {
+                    return new Promise((resolve, reject) => {
+                        const request = indexedDB.open(this.name, this.version);
+                        request.onerror = () => reject(request.error);
+                        request.onsuccess = () => {
+                            this.db = request.result;
+                            resolve();
+                        };
+                        request.onupgradeneeded = (event) => {
+                            const db = event.target.result;
+                            if (!db.objectStoreNames.contains(this.stores.barista_orders)) {
+                                const store = db.createObjectStore(this.stores.barista_orders, { keyPath: 'orderId' });
+                                store.createIndex('status', 'status', { unique: false });
+                                store.createIndex('timestamp', 'timestamp', { unique: false });
+                                store.createIndex('completedAt', 'completedAt', { unique: false });
+                            }
+                            if (!db.objectStoreNames.contains(this.stores.barista_sessions)) {
+                                const sessionStore = db.createObjectStore(this.stores.barista_sessions, { keyPath: 'id', autoIncrement: true });
+                                sessionStore.createIndex('username', 'username', { unique: false });
+                                sessionStore.createIndex('loginTime', 'loginTime', { unique: false });
+                                sessionStore.createIndex('logoutTime', 'logoutTime', { unique: false });
+                            }
+                        };
+                    });
+                },
+
+                // دوال الطلبات (للمبيعات)
+                async getAllOrders() {
+                    return new Promise((resolve, reject) => {
+                        const tx = this.db.transaction(this.stores.barista_orders, 'readonly');
+                        const store = tx.objectStore(this.stores.barista_orders);
+                        const request = store.getAll();
+                        request.onsuccess = () => resolve(request.result);
+                        request.onerror = () => reject(request.error);
+                    });
+                },
+
+                // دوال الجلسات
+                async getAllSessions() {
+                    return new Promise((resolve, reject) => {
+                        const tx = this.db.transaction(this.stores.barista_sessions, 'readonly');
+                        const store = tx.objectStore(this.stores.barista_sessions);
+                        const request = store.getAll();
+                        request.onsuccess = () => resolve(request.result);
+                        request.onerror = () => reject(request.error);
+                    });
+                },
+
+                async getSessionsByDateRange(startDate, endDate) {
+                    const all = await this.getAllSessions();
+                    return all.filter(s => {
+                        const login = new Date(s.loginTime);
+                        return login >= startDate && login <= endDate;
+                    });
+                },
+
+                // دالة جديدة لحذف جميع الجلسات
+                async clearAllSessions() {
+                    return new Promise((resolve, reject) => {
+                        const tx = this.db.transaction(this.stores.barista_sessions, 'readwrite');
+                        const store = tx.objectStore(this.stores.barista_sessions);
+                        const request = store.clear();
+                        request.onsuccess = () => resolve();
+                        request.onerror = () => reject(request.error);
+                    });
+                }
+            };
+
+            // ---------- دوال مساعدة (كما هي مع إضافة بعض الدوال) ----------
             const Utils = {
                 generateId: () => 'id_' + Date.now() + Math.random().toString(36).substr(2, 6),
 
@@ -432,11 +548,21 @@
                     }
                 },
 
+                formatDuration: (login, logout) => {
+                    if (!login) return '-';
+                    const start = new Date(login);
+                    const end = logout ? new Date(logout) : new Date();
+                    const diffMs = end - start;
+                    const diffMins = Math.floor(diffMs / 60000);
+                    const hours = Math.floor(diffMins / 60);
+                    const mins = diffMins % 60;
+                    return `${hours} ساعة ${mins} دقيقة`;
+                },
+
                 safeJSONParse: (str, fallback = null) => {
                     try { return JSON.parse(str); } catch { return fallback; }
                 },
 
-                // طلب HTTP مع إعادة محاولة ومهلة وتخزين مؤقت
                 async fetchWithCache(url, options = {}, cacheKey = null, ttl = CONFIG.CACHE_TTL) {
                     if (cacheKey) {
                         const cached = this.getSecureItem(cacheKey);
@@ -444,14 +570,9 @@
                             return cached.data;
                         }
                     }
-
                     const data = await this.fetchWithRetry(url, options);
-                    
                     if (cacheKey) {
-                        this.setSecureItem(cacheKey, {
-                            data: data,
-                            timestamp: Date.now()
-                        });
+                        this.setSecureItem(cacheKey, { data, timestamp: Date.now() });
                     }
                     return data;
                 },
@@ -476,7 +597,6 @@
                     }
                 },
 
-                // حفظ البيانات في التخزين المحلي مع تشفير بسيط
                 setSecureItem: (key, value) => {
                     try {
                         const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(value))));
@@ -518,7 +638,6 @@
                     this.showToast('تمت المزامنة بنجاح');
                 },
 
-                // حساب إجمالي الطلب بدقة
                 calculateOrderTotal(order) {
                     if (!order || !order.items) return 0;
                     return order.items.reduce((sum, item) => {
@@ -528,7 +647,6 @@
                     }, 0);
                 },
 
-                // تحديث إجمالي الطلب إذا كان 0
                 fixOrderTotal(order) {
                     if (!order.total || order.total === 0) {
                         order.total = this.calculateOrderTotal(order);
@@ -536,7 +654,6 @@
                     return order;
                 },
 
-                // ربط المنتج بالطلب باستخدام الاسم
                 matchProductToOrderItem(item) {
                     if (item.productId) return item;
                     const product = AppState.products.find(p => p.name === item.name);
@@ -547,16 +664,16 @@
                     return item;
                 },
 
-                // تنظيف قيمة الصورة: إذا كانت false أو "false" أو null أو undefined، نعيد سلسلة فارغة
                 cleanImageUrl: (url) => {
                     if (!url || url === 'false' || url === false) return '';
                     return url;
                 }
             };
 
-            // ---------- التعامل مع API ----------
+            // ---------- API (كما هي) ----------
             const API = {
                 async fetchMenu(force = false) {
+                    // نفس الكود الأصلي مع الحفاظ عليه
                     try {
                         Utils.setLoading(true);
                         const cacheKey = force ? null : CONFIG.STORAGE_KEYS.MENU_CACHE;
@@ -573,10 +690,8 @@
                                 ...p,
                                 cost: Number(p.cost) || 0,
                                 price: Number(p.price) || 0,
-                                // التأكد من أن الصورة ليست false
                                 image: Utils.cleanImageUrl(p.image)
                             }));
-                            // تحديث الكاش يدوياً
                             Utils.setSecureItem(CONFIG.STORAGE_KEYS.MENU_CACHE, {
                                 data: data,
                                 timestamp: Date.now()
@@ -603,6 +718,7 @@
                 },
 
                 async saveToServer(type, data) {
+                    // نفس الكود الأصلي
                     const action = type === 'categories' ? 'saveCategories' : 'saveProducts';
                     const formData = new URLSearchParams();
                     formData.append('action', action);
@@ -616,7 +732,6 @@
                         });
                         if (result.success) {
                             Utils.showToast('تم الحفظ بنجاح');
-                            // تحديث الكاش
                             const cache = Utils.getSecureItem(CONFIG.STORAGE_KEYS.MENU_CACHE);
                             if (cache && cache.data) {
                                 cache.data[type] = data;
@@ -637,11 +752,11 @@
                 },
 
                 async loadOrders(forceRefresh = false) {
+                    // نفس الكود الأصلي
                     if (!forceRefresh) {
                         const cached = Utils.getSecureItem(CONFIG.STORAGE_KEYS.ORDERS_CACHE);
                         if (cached && Array.isArray(cached)) {
                             AppState.allOrders = cached.map(order => {
-                                // إصلاح الإجمالي وربط المنتجات
                                 order = Utils.fixOrderTotal(order);
                                 order.items = (order.items || []).map(item => Utils.matchProductToOrderItem(item));
                                 return order;
@@ -691,11 +806,25 @@
                     } finally {
                         Utils.setLoading(false);
                     }
+                },
+
+                // دالة جديدة لجلب جلسات الموظفين من IndexedDB
+                async loadStaffSessions() {
+                    try {
+                        if (!DB.db) await DB.init();
+                        AppState.staffSessions = await DB.getAllSessions();
+                        // ترتيب تنازلي حسب وقت الدخول
+                        AppState.staffSessions.sort((a,b) => new Date(b.loginTime) - new Date(a.loginTime));
+                    } catch (error) {
+                        console.error('فشل تحميل جلسات الموظفين:', error);
+                        AppState.staffSessions = [];
+                    }
                 }
             };
 
-            // ---------- إدارة المخزون ----------
+            // ---------- إدارة المخزون (كما هي) ----------
             const InventoryManager = {
+                // نفس الكود الأصلي بالكامل (اختصاراً للطول، نحتفظ به كما هو)
                 load() {
                     const stored = Utils.getSecureItem(CONFIG.STORAGE_KEYS.INVENTORY);
                     if (stored) {
@@ -710,11 +839,9 @@
                     }
                     this.mergeWithProducts();
                 },
-
                 save() {
                     Utils.setSecureItem(CONFIG.STORAGE_KEYS.INVENTORY, AppState.inventoryData);
                 },
-
                 mergeWithProducts() {
                     const existingIds = new Set(AppState.inventoryData.map(i => i.productId));
                     const newItems = AppState.products.filter(p => !existingIds.has(p.id)).map(p => ({
@@ -728,7 +855,6 @@
                         this.save();
                     }
                 },
-
                 calculateSold() {
                     const completedOrders = AppState.allOrders.filter(o => o.status === 'completed');
                     const totalSoldMap = new Map();
@@ -748,7 +874,6 @@
                     });
                     return { totalSoldMap, todaySoldMap };
                 },
-
                 renderTable() {
                     const tbody = document.getElementById('inventoryTableBody');
                     if (!tbody) return;
@@ -777,7 +902,6 @@
                         </tr>`;
                     }).join('');
                 },
-
                 openCountModal() {
                     const tbody = document.getElementById('inventoryCountTable');
                     if (!tbody) return;
@@ -790,7 +914,6 @@
                     }).join('');
                     document.getElementById('inventoryModal').classList.add('active');
                 },
-
                 submitCount() {
                     const inputs = document.querySelectorAll('#inventoryCountTable input');
                     inputs.forEach(input => {
@@ -810,7 +933,6 @@
                     document.getElementById('inventoryModal').classList.remove('active');
                     Utils.showToast('تم تحديث المخزون الفعلي');
                 },
-
                 resetOpeningStock() {
                     if (!confirm('إعادة تعيين المخزون الافتتاحي للصفر؟')) return;
                     AppState.inventoryData.forEach(i => i.openingStock = 0);
@@ -818,7 +940,6 @@
                     this.renderTable();
                     Utils.showToast('تم إعادة التعيين');
                 },
-
                 resetFull() {
                     if (!confirm('سيتم تصفير المخزون والمبيعات بشكل دائم. هل أنت متأكد؟')) return;
                     AppState.allOrders = AppState.allOrders.filter(o => o.status !== 'completed');
@@ -834,7 +955,6 @@
                     if (typeof ReportsManager !== 'undefined') ReportsManager.applyRange();
                     Utils.showToast('تم التصفير');
                 },
-
                 exportData() {
                     const dataStr = JSON.stringify(AppState.inventoryData, null, 2);
                     const blob = new Blob([dataStr], { type: 'application/json' });
@@ -845,7 +965,6 @@
                     a.click();
                     URL.revokeObjectURL(url);
                 },
-
                 importData() {
                     const input = document.createElement('input');
                     input.type = 'file';
@@ -875,12 +994,11 @@
                 }
             };
 
-            // ---------- إدارة المبيعات والتصفية ----------
+            // ---------- إدارة المبيعات (كما هي) ----------
             const SalesManager = {
                 filterStatus: 'all',
                 dateFrom: null,
                 dateTo: null,
-
                 initDates() {
                     const today = new Date();
                     const sevenDaysAgo = new Date(today);
@@ -890,7 +1008,6 @@
                     if (from) from.value = sevenDaysAgo.toISOString().split('T')[0];
                     if (to) to.value = today.toISOString().split('T')[0];
                 },
-
                 applyFilter() {
                     const fromStr = document.getElementById('salesDateFrom')?.value;
                     const toStr = document.getElementById('salesDateTo')?.value;
@@ -899,7 +1016,6 @@
                     if (this.dateTo) this.dateTo.setHours(23,59,59,999);
                     this.render();
                 },
-
                 setPreset(preset) {
                     const today = new Date();
                     let from, to;
@@ -938,18 +1054,15 @@
                     }
                     this.applyFilter();
                 },
-
                 render() {
                     const container = document.getElementById('salesList');
                     if (!container) return;
-                    
                     let filtered = AppState.allOrders.map(order => Utils.fixOrderTotal(order));
                     const status = document.getElementById('salesStatusFilter')?.value || 'all';
                     if (status !== 'all') filtered = filtered.filter(o => o.status === status);
                     if (this.dateFrom) filtered = filtered.filter(o => new Date(o.timestamp) >= this.dateFrom);
                     if (this.dateTo) filtered = filtered.filter(o => new Date(o.timestamp) <= this.dateTo);
                     filtered.sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp));
-
                     if (filtered.length === 0) {
                         container.innerHTML = `<div class="empty-state"><i class="fas fa-receipt"></i><h3>لا توجد طلبات</h3></div>`;
                         return;
@@ -978,10 +1091,9 @@
                 }
             };
 
-            // ---------- إدارة التقارير ----------
+            // ---------- إدارة التقارير (كما هي) ----------
             const ReportsManager = {
                 currentPreset: 'today',
-
                 setPreset(preset, event) {
                     if (event) {
                         document.querySelectorAll('.preset-btn').forEach(btn => btn.classList.remove('active'));
@@ -1025,7 +1137,6 @@
                     if (endInput) endInput.value = end.toISOString().split('T')[0];
                     this.applyRange();
                 },
-
                 applyRange() {
                     const startStr = document.getElementById('startDate')?.value;
                     const endStr = document.getElementById('endDate')?.value;
@@ -1038,12 +1149,10 @@
                     });
                     this.render(filtered);
                 },
-
                 render(orders) {
                     const completed = orders.filter(o => o.status === 'completed');
                     let totalSales = 0, totalCost = 0;
                     const productMap = new Map();
-
                     completed.forEach(order => {
                         totalSales += order.total || 0;
                         (order.items || []).forEach(item => {
@@ -1055,11 +1164,9 @@
                             const qty = Number(item.quantity) || 1;
                             const price = Number(item.price) || 0;
                             const rev = price * qty;
-                            // البحث عن المنتج في قائمة المنتجات (قد يكون الاسم غير متطابق)
                             const product = AppState.products.find(p => p.id === pid || p.name === item.name);
                             const cost = product ? (Number(product.cost) || 0) * qty : 0;
                             totalCost += cost;
-
                             const key = pid || item.name;
                             if (productMap.has(key)) {
                                 const p = productMap.get(key);
@@ -1076,24 +1183,19 @@
                             }
                         });
                     });
-
                     const totalProfit = totalSales - totalCost;
                     const avgMargin = totalSales > 0 ? (totalProfit / totalSales) * 100 : 0;
-
                     const totalSalesEl = document.getElementById('totalSales');
                     const totalProfitEl = document.getElementById('totalProfit');
                     const totalOrdersEl = document.getElementById('totalOrders');
                     const avgMarginEl = document.getElementById('avgMargin');
-                    
                     if (totalSalesEl) totalSalesEl.innerHTML = (isNaN(totalSales) ? 0 : totalSales).toFixed(2) + ' د.أ';
                     if (totalProfitEl) totalProfitEl.innerHTML = (isNaN(totalProfit) ? 0 : totalProfit).toFixed(2) + ' د.أ';
                     if (totalOrdersEl) totalOrdersEl.innerHTML = completed.length;
                     if (avgMarginEl) avgMarginEl.innerHTML = (isNaN(avgMargin) ? 0 : avgMargin).toFixed(1) + '%';
-
                     const topProducts = Array.from(productMap.values())
                         .sort((a,b) => (b.rev - b.cost) - (a.rev - a.cost))
                         .slice(0,20);
-                    
                     const tbody = document.querySelector('#topProductsTable tbody');
                     if (tbody) {
                         tbody.innerHTML = topProducts.map(p => {
@@ -1110,10 +1212,8 @@
                             </tr>`;
                         }).join('');
                     }
-
                     this.updateChart(completed);
                 },
-
                 updateChart(orders) {
                     const dailyMap = new Map();
                     orders.forEach(o => {
@@ -1123,7 +1223,6 @@
                     const sorted = Array.from(dailyMap.entries()).sort((a,b) => new Date(a[0]) - new Date(b[0]));
                     const labels = sorted.map(d => d[0]);
                     const data = sorted.map(d => d[1]);
-
                     const canvas = document.getElementById('salesChart');
                     if (!canvas) return;
                     const ctx = canvas.getContext('2d');
@@ -1151,7 +1250,179 @@
                 }
             };
 
-            // ---------- إدارة المنيو (الأصناف والمنتجات) ----------
+            // ---------- إدارة سجل الموظفين (جديد) مع زر حذف ----------
+            const StaffManager = {
+                filterUser: 'all',
+                dateFrom: null,
+                dateTo: null,
+
+                async loadSessions() {
+                    await API.loadStaffSessions();
+                    this.render();
+                },
+
+                applyFilter() {
+                    const userFilter = document.getElementById('staffUserFilter')?.value || 'all';
+                    const fromStr = document.getElementById('staffDateFrom')?.value;
+                    const toStr = document.getElementById('staffDateTo')?.value;
+                    this.filterUser = userFilter;
+                    this.dateFrom = fromStr ? new Date(fromStr) : null;
+                    this.dateTo = toStr ? new Date(toStr) : null;
+                    if (this.dateTo) this.dateTo.setHours(23,59,59,999);
+                    this.render();
+                },
+
+                setPreset(preset) {
+                    const today = new Date();
+                    let from, to;
+                    switch (preset) {
+                        case 'today':
+                            from = new Date(today.setHours(0,0,0,0));
+                            to = new Date(today.setHours(23,59,59,999));
+                            break;
+                        case 'yesterday':
+                            const y = new Date(today);
+                            y.setDate(y.getDate()-1);
+                            from = new Date(y.setHours(0,0,0,0));
+                            to = new Date(y.setHours(23,59,59,999));
+                            break;
+                        case 'week':
+                            from = new Date(today);
+                            from.setDate(today.getDate() - 7);
+                            from.setHours(0,0,0,0);
+                            to = new Date(today.setHours(23,59,59,999));
+                            break;
+                        case 'month':
+                            from = new Date(today.getFullYear(), today.getMonth(), 1, 0,0,0);
+                            to = new Date(today.getFullYear(), today.getMonth()+1, 0, 23,59,59);
+                            break;
+                        case 'all':
+                            from = null; to = null; break;
+                    }
+                    const fromInput = document.getElementById('staffDateFrom');
+                    const toInput = document.getElementById('staffDateTo');
+                    if (from) {
+                        fromInput.value = from.toISOString().split('T')[0];
+                        toInput.value = to.toISOString().split('T')[0];
+                    } else {
+                        fromInput.value = '';
+                        toInput.value = '';
+                    }
+                    this.applyFilter();
+                },
+
+                render() {
+                    const tbody = document.getElementById('staffTableBody');
+                    if (!tbody) return;
+                    let filtered = [...AppState.staffSessions];
+                    // تصفية حسب المستخدم
+                    if (this.filterUser !== 'all') {
+                        filtered = filtered.filter(s => s.username === this.filterUser);
+                    }
+                    // تصفية حسب التاريخ
+                    if (this.dateFrom) {
+                        filtered = filtered.filter(s => new Date(s.loginTime) >= this.dateFrom);
+                    }
+                    if (this.dateTo) {
+                        filtered = filtered.filter(s => new Date(s.loginTime) <= this.dateTo);
+                    }
+                    if (filtered.length === 0) {
+                        tbody.innerHTML = `<tr><td colspan="5" class="empty-state">لا توجد جلسات</td></tr>`;
+                        return;
+                    }
+                    tbody.innerHTML = filtered.map(session => {
+                        const loginTime = Utils.formatDate(session.loginTime);
+                        const logoutTime = session.logoutTime ? Utils.formatDate(session.logoutTime) : 'لم يسجل خروج';
+                        const duration = Utils.formatDuration(session.loginTime, session.logoutTime);
+                        return `<tr>
+                            <td>${session.username}</td>
+                            <td>${loginTime}</td>
+                            <td>${logoutTime}</td>
+                            <td><span class="duration-badge">${duration}</span></td>
+                        </tr>`;
+                    }).join('');
+                },
+
+                // دالة حذف جميع الجلسات
+                async clearAllSessions() {
+                    if (!confirm('هل أنت متأكد من حذف جميع سجلات الموظفين؟ هذا الإجراء لا يمكن التراجع عنه.')) return;
+                    
+                    try {
+                        await DB.clearAllSessions();
+                        AppState.staffSessions = [];
+                        this.render();
+                        Utils.showToast('تم حذف جميع السجلات بنجاح');
+                        
+                        // محاولة إرسال طلب إلى السيرفر لحذف السجلات عن بعد (إذا كان متاحاً)
+                        try {
+                            const formData = new URLSearchParams();
+                            formData.append('action', 'clearStaffSessions');
+                            fetch(CONFIG.SCRIPT_URL, {
+                                method: 'POST',
+                                mode: 'no-cors',
+                                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                                body: formData
+                            }).catch(e => console.log('فشل إعلام السيرفر بالحذف'));
+                        } catch (e) {
+                            console.log('لا يمكن الاتصال بالسيرفر، تم الحذف محلياً فقط');
+                        }
+                    } catch (error) {
+                        console.error('فشل حذف السجلات:', error);
+                        Utils.showToast('حدث خطأ أثناء حذف السجلات', true);
+                    }
+                },
+
+                printReport() {
+                    const printWindow = window.open('', '_blank');
+                    printWindow.document.write(`
+                        <!DOCTYPE html>
+                        <html dir="rtl">
+                        <head>
+                            <meta charset="UTF-8">
+                            <title>تقرير جلسات الموظفين</title>
+                            <style>
+                                body { font-family: 'Cairo', sans-serif; padding: 20px; }
+                                h1 { color: #2D5A27; }
+                                table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+                                th { background: #2D5A27; color: white; padding: 10px; }
+                                td { padding: 8px; border-bottom: 1px solid #ddd; text-align: center; }
+                            </style>
+                        </head>
+                        <body>
+                            <h1>تقرير جلسات الموظفين - تل السنديان</h1>
+                            <p>تاريخ التقرير: ${new Date().toLocaleDateString('ar-EG')}</p>
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>اسم المستخدم</th>
+                                        <th>وقت الدخول</th>
+                                        <th>وقت الخروج</th>
+                                        <th>المدة</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${AppState.staffSessions.map(s => {
+                                        const loginTime = new Date(s.loginTime).toLocaleString('ar-EG');
+                                        const logoutTime = s.logoutTime ? new Date(s.logoutTime).toLocaleString('ar-EG') : 'لم يسجل خروج';
+                                        const duration = Utils.formatDuration(s.loginTime, s.logoutTime);
+                                        return `<tr>
+                                            <td>${s.username}</td>
+                                            <td>${loginTime}</td>
+                                            <td>${logoutTime}</td>
+                                            <td>${duration}</td>
+                                        </tr>`;
+                                    }).join('')}
+                                </tbody>
+                            </table>
+                        </body>
+                        </html>
+                    `);
+                    printWindow.document.close();
+                    setTimeout(() => printWindow.print(), 500);
+                }
+            };
+
+            // ---------- إدارة المنيو (الأصناف والمنتجات) كما هي ----------
             const MenuManager = {
                 renderCategories() {
                     const container = document.getElementById('categories');
@@ -1174,7 +1445,6 @@
                         `).join('')}
                     `;
                 },
-
                 renderProducts() {
                     const filter = document.getElementById('filterCategory')?.value || '';
                     let filtered = AppState.products;
@@ -1196,7 +1466,6 @@
                         </div>`;
                     }).join('');
                 },
-
                 openCategoryModal(item = { id: '', name: '', description: '', image: '', order: 0 }) {
                     AppState.editingItem = item.id ? item : null;
                     document.getElementById('modalTitle').innerText = AppState.editingItem ? 'تعديل صنف' : 'إضافة صنف';
@@ -1209,7 +1478,6 @@
                     `;
                     document.getElementById('modalOverlay').classList.add('active');
                 },
-
                 async saveCategory() {
                     const data = {
                         id: AppState.editingItem ? AppState.editingItem.id : Utils.generateId(),
@@ -1228,9 +1496,7 @@
                     App.UI.closeModal();
                     await API.saveToServer('categories', AppState.categories);
                 },
-
                 editCategory(item) { this.openCategoryModal(item); },
-
                 openProductModal(item = { id: '', categoryId: '', name: '', description: '', price: 0, cost: 0, image: '', isNew: false, order: 0 }) {
                     AppState.editingItem = item.id ? item : null;
                     document.getElementById('modalTitle').innerText = AppState.editingItem ? 'تعديل منتج' : 'إضافة منتج';
@@ -1248,7 +1514,6 @@
                     `;
                     document.getElementById('modalOverlay').classList.add('active');
                 },
-
                 async saveProduct() {
                     const data = {
                         id: AppState.editingItem ? AppState.editingItem.id : Utils.generateId(),
@@ -1266,7 +1531,6 @@
                         AppState.products[idx] = data;
                     } else {
                         AppState.products.push(data);
-                        // إضافة للمخزون
                         AppState.inventoryData.push({
                             productId: data.id,
                             openingStock: 0,
@@ -1279,9 +1543,7 @@
                     App.UI.closeModal();
                     await API.saveToServer('products', AppState.products);
                 },
-
                 editProduct(item) { this.openProductModal(item); },
-
                 async deleteItem(type, id) {
                     if (!confirm('تأكيد الحذف؟')) return;
                     if (type === 'products') {
@@ -1300,25 +1562,22 @@
                 closeModal() {
                     document.getElementById('modalOverlay').classList.remove('active');
                 },
-
                 closeInventoryModal() {
                     document.getElementById('inventoryModal').classList.remove('active');
                 },
-
                 switchTab(tab) {
                     AppState.currentTab = tab;
                     document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
                     
-                    // تفعيل التبويب
                     const activeBtn = Array.from(document.querySelectorAll('.tab-btn')).find(btn => 
                         btn.innerText.includes(tab === 'categories' ? 'الأصناف' : 
                                              tab === 'products' ? 'المنتجات' : 
                                              tab === 'sales' ? 'المبيعات' : 
-                                             tab === 'reports' ? 'الأرباح' : 'المخزون')
+                                             tab === 'reports' ? 'الأرباح' : 
+                                             tab === 'inventory' ? 'المخزون' : 'سجل الموظفين')
                     );
                     if (activeBtn) activeBtn.classList.add('active');
 
-                    // إعادة بناء المحتوى
                     const content = document.getElementById('contentArea');
                     if (!content) return;
 
@@ -1333,7 +1592,6 @@
                                 <button class="sync-btn" onclick="MenuManager.openProductModal()"><i class="fas fa-plus"></i> إضافة منتج</button>
                             </div>
                         `;
-                        // تعبئة خيارات الأصناف
                         const filter = document.getElementById('filterCategory');
                         if (filter) {
                             filter.innerHTML = '<option value="">جميع الأصناف</option>' +
@@ -1425,13 +1683,57 @@
                             </div>
                         `;
                         InventoryManager.renderTable();
+                    } else if (tab === 'staff') {
+                        // تبويب سجل الموظفين مع زر حذف بدلاً من تصدير JSON
+                        const users = [...new Set(AppState.staffSessions.map(s => s.username))];
+                        const userOptions = users.map(u => `<option value="${u}">${u}</option>`).join('');
+                        content.innerHTML = `
+                            <div class="tab-content active" id="staff">
+                                <div class="staff-header">
+                                    <div class="staff-filter-row">
+                                        <select id="staffUserFilter" class="filter-select">
+                                            <option value="all">جميع المستخدمين</option>
+                                            ${userOptions}
+                                        </select>
+                                        <div class="date-picker">
+                                            <label>من:</label> <input type="date" id="staffDateFrom" class="date-input">
+                                            <label>إلى:</label> <input type="date" id="staffDateTo" class="date-input">
+                                        </div>
+                                        <button class="apply-filter-btn" onclick="StaffManager.applyFilter()"><i class="fas fa-filter"></i> تطبيق</button>
+                                        <button class="date-preset-btn" onclick="StaffManager.setPreset('today')">اليوم</button>
+                                        <button class="date-preset-btn" onclick="StaffManager.setPreset('yesterday')">أمس</button>
+                                        <button class="date-preset-btn" onclick="StaffManager.setPreset('week')">آخر 7 أيام</button>
+                                        <button class="date-preset-btn" onclick="StaffManager.setPreset('month')">هذا الشهر</button>
+                                        <button class="date-preset-btn" onclick="StaffManager.setPreset('all')">الكل</button>
+                                    </div>
+                                    <div style="display: flex; gap: 10px; margin-top: 10px;">
+                                        <button class="refresh-sales-btn" onclick="StaffManager.loadSessions()"><i class="fas fa-sync-alt"></i> تحديث</button>
+                                        <button class="refresh-sales-btn" onclick="if(confirm('هل أنت متأكد من حذف جميع سجلات الموظفين؟')) StaffManager.clearAllSessions()"><i class="fas fa-trash-alt"></i> حذف السجل</button>
+                                        <button class="refresh-sales-btn" onclick="StaffManager.printReport()"><i class="fas fa-print"></i> طباعة</button>
+                                    </div>
+                                </div>
+                                <div class="staff-table-container">
+                                    <table class="staff-table">
+                                        <thead>
+                                            <tr>
+                                                <th>اسم المستخدم</th>
+                                                <th>وقت الدخول</th>
+                                                <th>وقت الخروج</th>
+                                                <th>المدة</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="staffTableBody"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        `;
+                        StaffManager.loadSessions();
                     }
                 }
             };
 
             // ---------- التطبيق الرئيسي ----------
             window.App = {
-                // دوال عامة
                 attemptLogin: () => {
                     const u = document.getElementById('username').value;
                     const p = document.getElementById('password').value;
@@ -1439,12 +1741,16 @@
                         document.getElementById('loginScreen').style.display = 'none';
                         document.getElementById('postLoginWrapper').style.display = 'flex';
                         document.getElementById('appContainer').classList.add('active');
-                        // تحميل البيانات
-                        API.fetchMenu().then(() => {
-                            InventoryManager.load();
-                            API.loadOrders(false);
-                            UI.switchTab('categories');
-                            Utils.processOfflineQueue();
+                        // تهيئة IndexedDB أولاً
+                        DB.init().then(() => {
+                            API.fetchMenu().then(() => {
+                                InventoryManager.load();
+                                API.loadOrders(false);
+                                // تحميل جلسات الموظفين
+                                API.loadStaffSessions();
+                                UI.switchTab('categories');
+                                Utils.processOfflineQueue();
+                            });
                         });
                     } else {
                         document.getElementById('errorMsg').style.display = 'block';
@@ -1462,6 +1768,7 @@
                         InventoryManager.mergeWithProducts();
                         InventoryManager.renderTable();
                         API.loadOrders(true);
+                        API.loadStaffSessions(); // تحديث الجلسات
                     });
                 },
 
@@ -1489,14 +1796,15 @@
                 Inventory: InventoryManager,
                 Menu: MenuManager,
                 Sales: SalesManager,
-                Reports: ReportsManager
+                Reports: ReportsManager,
+                Staff: StaffManager
             };
 
-            // تعريض الكائنات للنطاق العام
             window.MenuManager = MenuManager;
             window.InventoryManager = InventoryManager;
             window.SalesManager = SalesManager;
             window.ReportsManager = ReportsManager;
+            window.StaffManager = StaffManager;
 
             // تهيئة الأوراق المتساقطة
             (function createLeaves() {
