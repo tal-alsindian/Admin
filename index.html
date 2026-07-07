@@ -10,6 +10,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
+        /* (نفس الأنماط الأصلية، لم تتغير) */
         :root {
             --forest-green-light: #3f8b3a;
             --forest-green-bright: #5cb85c;
@@ -337,7 +338,6 @@
         .stock-out { background: rgba(192,57,43,0.15); color: var(--loss-color); border: 1px solid var(--loss-color); }
         .inv-notes { font-size: 0.82em; color: #888; margin-top: 6px; font-style: italic; }
 
-        /* ─── حالة التحميل للمخزون ─── */
         .inv-loading-state {
             text-align: center; padding: 60px 20px; background: white;
             border-radius: 20px; border: 2px dashed var(--clay-brown);
@@ -574,12 +574,10 @@
     (function() {
 
         // ───────────────────────────────────────────
-        //  الإعدادات
+        //  الإعدادات – تم تحديث الرابط
         // ───────────────────────────────────────────
         const CONFIG = {
-            // *** Script #2 هو الذي يدعم getInventory/saveInventory ***
-            SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbxFFC-cJHi7tdCXIpGlYaRkr2RbyfDwmJ7gewL91v7RaRt-Bpk-yaNdvvCctBpvOXPg/exec',
-           KITCHEN_API_URL: 'https://script.google.com/macros/s/AKfycbwm0ScrwRRPWVNxLlHVFtOfRimqqqHXvtcHJlUNEDFD2nl3BAHArzKCf4QadjVWwfembQ/exec',
+            API_URL: 'https://script.google.com/macros/s/AKfycbzAF2mK--E8kpy1wkcSHrdfhzUHy6CLDAfYJsdPUjL36qNam2D6Q5cOGgZ5w-D0NFX7/exec',
             CREDENTIALS: { user: 'Mismar', pass: 'Mismar.11' },
             STORAGE_KEYS: {
                 INVENTORY: 'tel_alsindian_manual_inventory_v3',
@@ -601,7 +599,7 @@
             categories: [],
             products: [],
             allOrders: [],
-            manualInventory: [],   // ← المخزون اليدوي
+            manualInventory: [],
             currentTab: 'categories',
             salesChart: null,
             isLoading: false,
@@ -664,7 +662,6 @@
             generateId: () => 'inv_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
 
             showToast(msg, isError = false, duration = 3000) {
-                // إزالة أي toast موجود
                 document.querySelectorAll('.toast').forEach(t => t.remove());
                 const t = document.createElement('div');
                 t.className = 'toast';
@@ -710,7 +707,6 @@
                 } catch { return null; }
             },
 
-            // ─── FETCH مع timeout وretry ───
             async fetchWithRetry(url, options = {}, retries = CONFIG.MAX_RETRIES) {
                 for (let attempt = 0; attempt <= retries; attempt++) {
                     const ctrl = new AbortController();
@@ -765,7 +761,8 @@
                             return true;
                         }
                     }
-                    const data = await Utils.fetchWithRetry(`${CONFIG.SCRIPT_URL}?action=getMenuData&_=${Date.now()}`);
+                    const menuUrl = 'https://script.google.com/macros/s/AKfycbxFFC-cJHi7tdCXIpGlYaRkr2RbyfDwmJ7gewL91v7RaRt-Bpk-yaNdvvCctBpvOXPg/exec';
+                    const data = await Utils.fetchWithRetry(`${menuUrl}?action=getMenuData&_=${Date.now()}`);
                     if (data && data.success) {
                         AppState.categories = data.categories || [];
                         AppState.products = (data.products || []).map(p => ({
@@ -796,7 +793,7 @@
                 formData.append('action', action);
                 formData.append('data', JSON.stringify(data));
                 try {
-                    const result = await Utils.fetchWithRetry(CONFIG.SCRIPT_URL, { method: 'POST', body: formData });
+                    const result = await Utils.fetchWithRetry(CONFIG.API_URL, { method: 'POST', body: formData });
                     if (result && result.success) { Utils.showToast('تم الحفظ بنجاح'); return true; }
                     throw new Error(result?.error || 'خطأ');
                 } catch (err) {
@@ -806,6 +803,7 @@
                 }
             },
 
+            // ═══════ تحميل الطلبات من السيرفر (محسّن) ═══════
             async loadOrders(forceRefresh = false) {
                 if (!forceRefresh) {
                     const cached = Utils.getSecureItem(CONFIG.STORAGE_KEYS.ORDERS_CACHE);
@@ -815,18 +813,31 @@
                     }
                 }
                 try {
-                    const data = await Utils.fetchWithRetry(`${CONFIG.KITCHEN_API_URL}?action=getOrders&status=all&_=${Date.now()}`);
+                    const data = await Utils.fetchWithRetry(`${CONFIG.API_URL}?action=getOrders&status=all&_=${Date.now()}`);
+                    console.log('📥 admin: getOrders response =', data);
+
+                    let orders = null;
                     if (data && data.success && data.orders) {
-                        AppState.allOrders = data.orders.map(order => {
-                            const items = Array.isArray(order.items) ? order.items.map(item => {
-                                const product = AppState.products.find(p => p.name === item.name);
-                                return {
-                                    productId: product ? product.id : null,
-                                    name: item.name || 'منتج',
-                                    quantity: Number(item.quantity) || 1,
-                                    price: Number(item.price) || (product ? product.price : 0)
-                                };
-                            }) : [];
+                        orders = data.orders;
+                    } else if (data && data.data && Array.isArray(data.data)) {
+                        orders = data.data;
+                    } else if (data && Array.isArray(data)) {
+                        orders = data;
+                    } else if (data && data.result && Array.isArray(data.result)) {
+                        orders = data.result;
+                    } else {
+                        console.warn('Unknown orders structure:', data);
+                        throw new Error('استجابة غير متوقعة');
+                    }
+
+                    if (orders && Array.isArray(orders)) {
+                        AppState.allOrders = orders.map(order => {
+                            const items = Array.isArray(order.items) ? order.items.map(item => ({
+                                productId: null,
+                                name: item.name || 'منتج',
+                                quantity: Number(item.quantity) || 1,
+                                price: Number(item.price) || 0
+                            })) : [];
                             let total = Number(order.total) || 0;
                             if (!total && items.length) total = items.reduce((s, i) => s + i.price * i.quantity, 0);
                             return {
@@ -834,11 +845,14 @@
                                 timestamp: order.timestamp || new Date().toISOString(),
                                 tableNumber: order.tableNumber || '?',
                                 notes: order.notes || '',
-                                total, items, status: order.status || 'preparing'
+                                total, items, status: order.status || 'completed'
                             };
                         });
                         Utils.setSecureItem(CONFIG.STORAGE_KEYS.ORDERS_CACHE, AppState.allOrders);
-                    } else throw new Error('بيانات غير صحيحة');
+                        console.log('✅ تم تحميل', AppState.allOrders.length, 'طلبات');
+                    } else {
+                        throw new Error('بيانات غير صحيحة');
+                    }
                 } catch (err) {
                     console.warn('loadOrders error:', err);
                     const cached = Utils.getSecureItem(CONFIG.STORAGE_KEYS.ORDERS_CACHE);
@@ -846,13 +860,12 @@
                 }
             },
 
-            // ── المخزون: حفظ على السيرفر ──
             async saveInventoryToServer(items) {
                 const formData = new URLSearchParams();
                 formData.append('action', 'saveInventory');
                 formData.append('data', JSON.stringify(items));
                 try {
-                    const result = await Utils.fetchWithRetry(CONFIG.SCRIPT_URL, { method: 'POST', body: formData });
+                    const result = await Utils.fetchWithRetry(CONFIG.API_URL, { method: 'POST', body: formData });
                     if (result && result.success) return true;
                     console.warn('saveInventory server returned:', result);
                     return false;
@@ -862,15 +875,10 @@
                 }
             },
 
-            // ── المخزون: جلب من السيرفر ──
             async loadInventoryFromServer() {
                 try {
-                    const data = await Utils.fetchWithRetry(
-                        `${CONFIG.SCRIPT_URL}?action=getInventory&_=${Date.now()}`
-                    );
-                    if (data && data.success && Array.isArray(data.items)) {
-                        return data.items;          // ← يعيد مصفوفة حتى لو فارغة
-                    }
+                    const data = await Utils.fetchWithRetry(`${CONFIG.API_URL}?action=getInventory&_=${Date.now()}`);
+                    if (data && data.success && Array.isArray(data.items)) return data.items;
                     console.warn('loadInventoryFromServer: unexpected response', data);
                     return null;
                 } catch (err) {
@@ -891,20 +899,15 @@
         };
 
         // ───────────────────────────────────────────
-        //  InventoryManager – المخزون اليدوي
+        //  InventoryManager (نفس الكود السابق)
         // ───────────────────────────────────────────
         const InventoryManager = {
-
-            // ─── تحميل المخزون عند الدخول ───
-            // الأولوية: localStorage → السيرفر → مصفوفة فارغة
             async load() {
                 const local = Utils.getSecureItem(CONFIG.STORAGE_KEYS.INVENTORY);
                 if (local && Array.isArray(local)) {
-                    // حتى لو فارغة نقبلها (المستخدم لم يضف شيئاً بعد)
                     AppState.manualInventory = local;
                     return;
                 }
-                // لا يوجد محلي → نجرب السيرفر
                 try {
                     const serverItems = await API.loadInventoryFromServer();
                     if (serverItems !== null) {
@@ -918,17 +921,13 @@
                 }
             },
 
-            // ─── حفظ (محلي أولاً، ثم السيرفر في الخلفية) ───
             async save() {
-                // حفظ محلي فوري
                 Utils.setSecureItem(CONFIG.STORAGE_KEYS.INVENTORY, AppState.manualInventory);
-                // حفظ على السيرفر بشكل غير متزامن (لا نوقف الواجهة)
                 API.saveInventoryToServer(AppState.manualInventory).then(ok => {
                     if (!ok) console.warn('المخزون لم يُحفظ على السيرفر – محفوظ محلياً فقط');
                 });
             },
 
-            // ─── مزامنة يدوية من السيرفر ───
             async syncFromServer() {
                 const grid = document.getElementById('inventoryGrid');
                 if (grid) {
@@ -956,7 +955,6 @@
                 }
             },
 
-            // ─── فتح مودال الإضافة ───
             openAddModal() {
                 AppState.editingInvItem = null;
                 document.getElementById('invModalTitle').innerText = 'إضافة مادة جديدة';
@@ -965,7 +963,6 @@
                 setTimeout(() => document.getElementById('inv_name').focus(), 100);
             },
 
-            // ─── فتح مودال التعديل ───
             openEditModal(id) {
                 const item = AppState.manualInventory.find(i => i.id === id);
                 if (!item) return;
@@ -999,7 +996,6 @@
                 if (catEl) catEl.value = 'أخرى';
             },
 
-            // ─── حفظ مادة (إضافة أو تعديل) ───
             async saveItem() {
                 const name = document.getElementById('inv_name').value.trim();
                 const qty  = parseFloat(document.getElementById('inv_qty').value);
@@ -1036,12 +1032,10 @@
 
                 this.closeModal();
                 await this.save();
-                // تحديث قائمة التصنيفات في الفلتر
                 this._refreshCategoryFilter();
                 this.render();
             },
 
-            // ─── حذف مادة ───
             async deleteItem(id) {
                 const item = AppState.manualInventory.find(i => i.id === id);
                 if (!item) return;
@@ -1053,7 +1047,6 @@
                 Utils.showToast('🗑️ تم حذف المادة');
             },
 
-            // ─── تحديث قائمة التصنيفات ───
             _refreshCategoryFilter() {
                 const select = document.getElementById('invCatFilter');
                 if (!select) return;
@@ -1063,7 +1056,6 @@
                     categories.map(c => `<option value="${c}" ${c === currentVal ? 'selected' : ''}>${c}</option>`).join('');
             },
 
-            // ─── عرض المخزون ───
             render(searchQuery = '', categoryFilter = '') {
                 const container    = document.getElementById('inventoryGrid');
                 const statsContainer = document.getElementById('invStatsRow');
@@ -1083,7 +1075,6 @@
                     items = items.filter(i => i.category === categoryFilter);
                 }
 
-                // ─── إحصاءات ───
                 if (statsContainer) {
                     const totalItems = AppState.manualInventory.length;
                     const lowStock   = AppState.manualInventory.filter(i => i.qty > 0 && i.qty <= (i.minQty || 5)).length;
@@ -1113,7 +1104,6 @@
                     `;
                 }
 
-                // ─── حالة فارغة ───
                 if (items.length === 0) {
                     container.innerHTML = AppState.manualInventory.length === 0
                         ? `<div class="empty-inventory">
@@ -1132,7 +1122,6 @@
                     return;
                 }
 
-                // ─── بطاقات المخزون ───
                 container.innerHTML = items.map(item => {
                     const isOut  = item.qty === 0;
                     const isLow  = !isOut && item.qty <= (item.minQty || 5);
@@ -1229,7 +1218,7 @@
         };
 
         // ───────────────────────────────────────────
-        //  SalesManager
+        //  SalesManager (مع تحسين التحديث)
         // ───────────────────────────────────────────
         const SalesManager = {
             dateFrom: null, dateTo: null,
@@ -1277,6 +1266,12 @@
                 this.applyFilter();
             },
 
+            async refreshOrders() {
+                await API.loadOrders(true);
+                this.applyFilter();
+                if (AppState.currentTab === 'reports') ReportsManager.applyRange();
+            },
+
             render() {
                 const container = document.getElementById('salesList');
                 if (!container) return;
@@ -1315,7 +1310,7 @@
         };
 
         // ───────────────────────────────────────────
-        //  ReportsManager
+        //  ReportsManager (نفس الكود)
         // ───────────────────────────────────────────
         const ReportsManager = {
             currentPreset: 'today',
@@ -1433,7 +1428,7 @@
         };
 
         // ───────────────────────────────────────────
-        //  StaffManager
+        //  StaffManager (نفس الكود)
         // ───────────────────────────────────────────
         const StaffManager = {
             filterUser: 'all', dateFrom: null, dateTo: null,
@@ -1522,7 +1517,7 @@
         };
 
         // ───────────────────────────────────────────
-        //  MenuManager
+        //  MenuManager (نفس الكود)
         // ───────────────────────────────────────────
         const MenuManager = {
             renderCategories() {
@@ -1655,7 +1650,7 @@
         const UI = {
             closeModal() { document.getElementById('modalOverlay').classList.remove('active'); },
 
-            switchTab(tab) {
+            async switchTab(tab) {
                 AppState.currentTab = tab;
                 document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
                 const tabLabels = {
@@ -1705,14 +1700,13 @@
                                     <button class="date-preset-btn" onclick="SalesManager.setPreset('all')">الكل</button>
                                 </div>
                                 <button class="apply-filter-btn" onclick="SalesManager.applyFilter()"><i class="fas fa-filter"></i> تطبيق</button>
-                                <button class="refresh-sales-btn" onclick="App.refreshSales()"><i class="fas fa-sync-alt"></i></button>
-                                <button class="refresh-sales-btn" onclick="App.syncOrdersFromServer()"><i class="fas fa-cloud-download-alt"></i> مزامنة</button>
+                                <button class="refresh-sales-btn" onclick="SalesManager.refreshOrders()"><i class="fas fa-sync-alt"></i> تحديث</button>
                             </div>
                         </div>
                         <div id="salesList" class="orders-grid"></div>
                     </div>`;
                     SalesManager.initDates();
-                    SalesManager.applyFilter();
+                    await SalesManager.refreshOrders();
 
                 } else if (tab === 'reports') {
                     content.innerHTML = `<div class="tab-content active" id="reports">
@@ -1721,6 +1715,7 @@
                                 <div><label>من:</label> <input type="date" id="startDate" class="date-input"></div>
                                 <div><label>إلى:</label> <input type="date" id="endDate" class="date-input"></div>
                                 <button class="refresh-sales-btn" onclick="ReportsManager.applyRange()"><i class="fas fa-filter"></i> تطبيق</button>
+                                <button class="refresh-sales-btn" onclick="SalesManager.refreshOrders(); ReportsManager.applyRange();"><i class="fas fa-sync-alt"></i> تحديث</button>
                             </div>
                             <div class="preset-buttons">
                                 <button class="preset-btn active" onclick="ReportsManager.setPreset('today',event)">اليوم</button>
@@ -1746,19 +1741,13 @@
                             </table>
                         </div>
                     </div>`;
+                    await SalesManager.refreshOrders();
                     ReportsManager.setPreset(ReportsManager.currentPreset);
 
-                // ══════════════════════════════════════════
-                //  تبويب المخزون – الإصلاح الكامل
-                // ══════════════════════════════════════════
                 } else if (tab === 'inventory') {
                     const categories = [...new Set(AppState.manualInventory.map(i => i.category).filter(Boolean))];
                     content.innerHTML = `<div class="tab-content active" id="inventory">
-
-                        <!-- إحصاءات -->
                         <div class="inventory-stats-row" id="invStatsRow"></div>
-
-                        <!-- شريط الأدوات -->
                         <div class="inventory-header">
                             <div class="inventory-title"><i class="fas fa-boxes"></i> إدارة المخزون</div>
                             <div class="inventory-actions">
@@ -1776,8 +1765,6 @@
                                 </button>
                             </div>
                         </div>
-
-                        <!-- بحث وتصفية -->
                         <div class="inventory-search-bar">
                             <input type="text" class="inventory-search-input" placeholder="🔍 ابحث عن مادة..."
                                 id="invSearchInput"
@@ -1788,12 +1775,8 @@
                                 ${categories.map(c => `<option value="${c}">${c}</option>`).join('')}
                             </select>
                         </div>
-
-                        <!-- البطاقات -->
                         <div class="inventory-grid" id="inventoryGrid"></div>
                     </div>`;
-
-                    // ← عرض المخزون مباشرة (لا نعتمد على السيرفر هنا)
                     InventoryManager.render();
 
                 } else if (tab === 'staff') {
@@ -1848,13 +1831,9 @@
                     document.getElementById('postLoginWrapper').style.display = 'flex';
                     document.getElementById('appContainer').classList.add('active');
 
-                    // تهيئة IndexedDB
                     try { await DB.init(); } catch(e) { console.warn('DB init failed:', e); }
 
-                    // تحميل المخزون أولاً (محلي → سيرفر)
                     await InventoryManager.load();
-
-                    // تحميل باقي البيانات بشكل متوازٍ
                     await Promise.allSettled([
                         API.fetchMenu(),
                         API.loadOrders(false),
@@ -1881,25 +1860,18 @@
                     API.loadOrders(true),
                     API.loadStaffSessions()
                 ]);
-                // إعادة رسم التبويب الحالي
                 UI.switchTab(AppState.currentTab);
                 Utils.showToast('✅ تم تحديث جميع البيانات');
             },
 
             refreshSales() {
-                API.loadOrders(false).then(() => {
-                    SalesManager.applyFilter();
-                    if (AppState.currentTab === 'reports') ReportsManager.applyRange();
-                });
+                SalesManager.refreshOrders();
             },
 
             syncOrdersFromServer() {
                 if (confirm('سيتم جلب آخر الطلبات من السيرفر. هل تريد المتابعة؟')) {
                     Utils.showToast('جاري المزامنة...');
-                    API.loadOrders(true).then(() => {
-                        SalesManager.applyFilter();
-                        if (AppState.currentTab === 'reports') ReportsManager.applyRange();
-                    });
+                    SalesManager.refreshOrders();
                 }
             },
 
@@ -1907,7 +1879,6 @@
             UI
         };
 
-        // تصدير للاستخدام العالمي
         window.MenuManager      = MenuManager;
         window.InventoryManager = InventoryManager;
         window.SalesManager     = SalesManager;
@@ -1929,7 +1900,6 @@
             }
         })();
 
-        // Enter للدخول
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' && document.getElementById('loginScreen').style.display !== 'none') {
                 App.attemptLogin();
