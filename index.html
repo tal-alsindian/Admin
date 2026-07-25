@@ -446,6 +446,20 @@
             .form-row { grid-template-columns: 1fr; }
             .inventory-grid { grid-template-columns: 1fr; }
         }
+
+        /* === Sales Total Badge (added) === */
+        .sales-total-badge {
+            display: flex; justify-content: space-between; align-items: center;
+            gap: 15px; padding: 12px 20px;
+            background: linear-gradient(145deg, #2b7a2b, #4CAF50, #8BC34A);
+            color: #fff; border: 2px solid var(--sandy-beige); border-radius: 50px;
+            box-shadow: 0 8px 20px rgba(45,90,39,0.35);
+            margin-bottom: 15px; flex-wrap: wrap;
+        }
+        .sales-total-badge .stb-label { font-weight: 700; font-size: 1rem; display: flex; align-items: center; gap: 8px; }
+        .sales-total-badge .stb-value { font-weight: 900; font-size: 1.4rem; letter-spacing: .5px; }
+        .sales-total-badge .stb-count { font-size: .85rem; opacity: .9; }
+
     </style>
 </head>
 <body>
@@ -1281,10 +1295,21 @@
                 if (this.dateFrom) filtered = filtered.filter(o => new Date(o.timestamp) >= this.dateFrom);
                 if (this.dateTo)   filtered = filtered.filter(o => new Date(o.timestamp) <= this.dateTo);
                 filtered.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+                // === Total للفواتير المعروضة حسب الفلتر ===
+                try {
+                    const _sum = filtered.reduce((s,o)=>s + (Number(o.total)||0), 0);
+                    const _valEl = document.getElementById('salesTotalValue');
+                    const _cntEl = document.getElementById('salesTotalCount');
+                    if (_valEl) _valEl.textContent = _sum.toFixed(2) + ' د.أ';
+                    if (_cntEl) _cntEl.textContent = filtered.length + ' فاتورة';
+                } catch(e) { console.warn('salesTotal calc err', e); }
+
                 if (!filtered.length) {
                     container.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><i class="fas fa-receipt" style="font-size:3em;color:var(--sandy-beige)"></i><h3>لا توجد طلبات</h3></div>`;
                     return;
                 }
+
                 container.innerHTML = filtered.map(order => {
                     const items   = order.items || [];
                     const timeStr = Utils.formatDate(order.timestamp);
@@ -1682,6 +1707,13 @@
                 } else if (tab === 'sales') {
                     content.innerHTML = `<div class="tab-content active" id="sales">
                         <div class="sales-header">
+                        <div class="sales-total-badge" id="salesTotalBadge">
+                            <div class="stb-label"><i class="fas fa-coins"></i> Total - إجمالي المبيعات</div>
+                            <div style="display:flex; flex-direction:column; align-items:flex-end;">
+                                <div class="stb-value" id="salesTotalValue">0.00 د.أ</div>
+                                <div class="stb-count" id="salesTotalCount">0 فاتورة</div>
+                            </div>
+                        </div>
                             <div class="sales-filter-row">
                                 <select id="salesStatusFilter" class="filter-select" onchange="SalesManager.applyFilter()">
                                     <option value="all">جميع الطلبات</option>
